@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Por Dentro · Digest Inteligente · Jun 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg:       #FAF8F4;
+      --text:     #2A1F18;
+      --muted:    #7A6B60;
+      --surface:  #FFFFFF;
+      --border:   #E4DDD4;
+      --hover-bg: #F3EEE8;
+
+      /* Paleta de marca */
+      --merlot:   #501318;
+      --esmeralda:#063B35;
+      --moss:     #577328;
+      --placid:   #8FA5B8;
+      --dbrown:   #3D2B1F;
+      --ouro:     #BB9351;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ══ HEADER ══════════════════════════════════════ */
+    .hdr {
+      background: var(--text);
+      color: var(--bg);
+      padding: 26px 52px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .hdr-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px;
+      font-weight: 300;
+      letter-spacing: -0.4px;
+      line-height: 1;
+    }
+    .hdr-title em { font-style: italic; color: var(--ouro); }
+    .hdr-sub {
+      font-size: 10.5px;
+      opacity: 0.45;
+      margin-top: 5px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+    .hdr-right { font-size: 10.5px; opacity: 0.4; text-align: right; line-height: 1.7; }
+
+    /* ══ TABS ════════════════════════════════════════ */
+    .tabs {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      overflow-x: auto;
+      padding: 0 52px;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      padding: 14px 18px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--muted);
+      border-bottom: 2.5px solid transparent;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color .18s;
+    }
+    .tab:hover { color: var(--text); }
+
+    .tab.active[data-c="juridica"]     { color: var(--merlot);   border-bottom-color: var(--merlot);   font-weight:600; }
+    .tab.active[data-c="burocratica"]  { color: var(--esmeralda);border-bottom-color: var(--esmeralda);font-weight:600; }
+    .tab.active[data-c="academica"]    { color: var(--moss);     border-bottom-color: var(--moss);     font-weight:600; }
+    .tab.active[data-c="civica"]       { color: #5B7A93;         border-bottom-color: var(--placid);   font-weight:600; }
+    .tab.active[data-c="financas"]     { color: var(--dbrown);   border-bottom-color: var(--dbrown);   font-weight:600; }
+    .tab.active[data-c="trendmapping"] { color: #8B6B2E;         border-bottom-color: var(--ouro);     font-weight:600; }
+    .tab.active[data-c="mesa"]         { color: var(--text);     border-bottom-color: var(--text);     font-weight:600; }
+
+    .tbadge {
+      background: var(--border);
+      color: var(--muted);
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* ══ MAIN ════════════════════════════════════════ */
+    .main { max-width: 1100px; margin: 0 auto; padding: 44px 52px; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Category header */
+    .cat-hdr { margin-bottom: 30px; }
+    .cat-hdr h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 38px;
+      font-weight: 300;
+      line-height: 1.05;
+      margin-bottom: 8px;
+    }
+    .cat-hdr .cdesc {
+      font-size: 13.5px;
+      color: var(--muted);
+      max-width: 640px;
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+    .sources-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .sources-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+      opacity: .7;
+    }
+    .schip {
+      background: var(--hover-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-size: 10.5px;
+    }
+    .schip a { color: var(--muted); text-decoration: none; }
+    .schip a:hover { color: var(--text); text-decoration: underline; }
+
+    /* ══ NEWS CARDS (details/summary) ════════════════ */
+    .news-stack { display: flex; flex-direction: column; gap: 10px; }
+
+    details.nc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left-width: 3px;
+      border-left-color: var(--cc);        /* set inline */
+      border-radius: 10px;
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+    details.nc:hover  { box-shadow: 0 3px 16px rgba(42,31,24,.06); }
+    details.nc[open]  { box-shadow: 0 5px 26px rgba(42,31,24,.1); }
+
+    summary.ncs {
+      list-style: none;
+      cursor: pointer;
+      padding: 18px 22px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      user-select: none;
+    }
+    summary.ncs::-webkit-details-marker { display: none; }
+
+    .ncs-left { flex: 1; }
+    .ncs-left h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 21px;
+      font-weight: 400;
+      line-height: 1.25;
+      color: var(--text);
+      margin-bottom: 11px;
+    }
+
+    .ntags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+    .tag-fmt {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--cc);
+    }
+    .tag-p {
+      background: var(--hover-bg);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .tag-u {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .u-alta   { background:#FCEAE6; color:#7D2310; }
+    .u-media  { background:#FEF3E2; color:#6B4008; }
+    .u-baixa  { background:#EBF0E5; color:#2A5520; }
+    .tag-kpi {
+      background: #EEEAFF;
+      color: #3D1F9B;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .nc-chevron {
+      font-size: 14px;
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-top: 5px;
+      transition: transform .2s;
+    }
+    details.nc[open] .nc-chevron { transform: rotate(180deg); }
+
+    /* Card body */
+    .ncb {
+      padding: 0 22px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .ncb-desc {
+      padding-top: 16px;
+      font-size: 14px;
+      line-height: 1.72;
+      color: var(--text);
+    }
+    .ncb-fmt {
+      background: rgba(0,0,0,.02);
+      border-left: 2.5px solid var(--cc);
+      padding: 12px 14px;
+      border-radius: 0 7px 7px 0;
+    }
+    .ncb-fmt-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .ncb-fmt p { font-size: 13px; line-height: 1.57; color: var(--text); }
+
+    .ncb-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .nc-fonte {
+      font-size: 11.5px;
+      color: var(--muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .nc-fonte:hover { color: var(--text); text-decoration: underline; }
+
+    .btn-mesa {
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      padding: 9px 16px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity .18s;
+    }
+    .btn-mesa:hover { opacity: .78; }
+    .btn-mesa.added {
+      background: #EBF0E5;
+      color: #2A5520;
+      cursor: default;
+    }
+
+    /* ══ MESA DE ROTEIRIZAÇÃO ════════════════════════ */
+    .mesa-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .mesa-hdr h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 38px;
+      font-weight: 300;
+    }
+    .mesa-hdr-sub { font-size: 13.5px; color: var(--muted); margin-top: 5px; }
+    .mesa-acts { display: flex; gap: 9px; align-items: center; }
+
+    .btn-export {
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: opacity .18s;
+    }
+    .btn-export:hover { opacity: .78; }
+    .btn-export:disabled { opacity: .4; cursor: default; }
+
+    .btn-clear {
+      background: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .15s;
+    }
+    .btn-clear:hover { color: var(--text); border-color: var(--muted); }
+
+    .mesa-empty {
+      text-align: center;
+      padding: 72px 32px;
+      color: var(--muted);
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+    }
+    .mesa-empty-icon { font-size: 38px; opacity: .35; margin-bottom: 16px; }
+    .mesa-empty p { font-size: 14px; line-height: 1.65; }
+    .mesa-empty strong { color: var(--text); }
+
+    .mesa-list { display: flex; flex-direction: column; gap: 20px; }
+
+    .mcard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .mcard-hdr {
+      padding: 16px 20px;
+      background: var(--hover-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .mcard-hdr-left { flex: 1; }
+    .mcard-hdr h4 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.25;
+    }
+    .mcard-cat {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-top: 4px;
+      opacity: .65;
+    }
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+    .btn-remove:hover { background: #FCEAE6; color: #7D2310; }
+
+    .mcard-body { padding: 16px 20px; }
+    .mcard-body label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .mesa-ta {
+      width: 100%;
+      min-height: 110px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+      resize: none;
+      overflow: hidden;
+      transition: border-color .15s;
+    }
+    .mesa-ta:focus { outline: none; border-color: var(--muted); }
+    .mesa-ta::placeholder { color: #C0B0A0; }
+
+    .save-dot {
+      font-size: 11px;
+      color: #2A5520;
+      margin-top: 6px;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .save-dot.show { opacity: 1; }
+
+    /* ══ FORMATO SELECT ══════════════════════════════ */
+    .fmt-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .fmt-select-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .fmt-select {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px 6px 9px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: var(--text);
+      background: var(--bg);
+      cursor: pointer;
+      min-width: 158px;
+      transition: border-color .15s;
+    }
+    .fmt-select:focus { outline: none; border-color: var(--ouro); }
+    .fmt-select:hover { border-color: var(--muted); }
+
+    /* ══ BOTÃO PROMPT À CLAUDE ════════════════════════ */
+    .btn-prompt-claude {
+      background: var(--ouro);
+      color: var(--bg);
+      border: none;
+      padding: 7px 14px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity .18s, background .25s, color .25s;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .btn-prompt-claude:hover { opacity: .82; }
+
+    .mcard-hdr-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    /* ══ RESPONSIVE ══════════════════════════════════ */
+    @media (max-width: 780px) {
+      .hdr   { padding: 18px 20px; }
+      .tabs  { padding: 0 12px; }
+      .main  { padding: 28px 20px; }
+      .fmt-select { min-width: 130px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div>
+    <div class="hdr-title">Por Dentro <em>·</em> Digest</div>
+    <div class="hdr-sub">26 mai — 8 jun 2026 &nbsp;·&nbsp; 6 categorias &nbsp;·&nbsp; 60 pautas</div>
+  </div>
+  <div class="hdr-right">Gerado em 8 jun 2026<br>Inteligência editorial</div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs" id="tabs"></nav>
+
+<!-- MAIN -->
+<main class="main" id="main"></main>
+
+<script>
+/* ════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════ */
+const CAT = {
+  trendmapping: {
+    color:'#BB9351', icon:'🔥', label:'Boas Práticas (Mídia FR)', count:10,
+    desc:'Mapeamento de snack content e ganchos de viralização extraídos dos perfis líderes de mídia francesa — a lente de inspiração antes de mergulhar nas pautas.',
+    alvo:'Toda a audiência',
+    sources:[['@brutofficiel','https://www.instagram.com/brutofficiel/'],['@bfmtv','https://www.instagram.com/bfmtv/'],['@20minutesfrance','https://www.instagram.com/20minutesfrance/'],['@france.tv','https://www.instagram.com/france.tv/'],['@leparisien','https://www.instagram.com/leparisien/']]
+  },
+  juridica: {
+    color:'#501318', icon:'⚖️', label:'Jurídica', count:10,
+    desc:'Desmistificar o sistema jurídico migratório sem assustar — com dados reais e acionáveis.',
+    alvo:'P01 · P03',
+    sources:[['Service-Public','https://www.service-public.fr/particuliers/vosdroits/N19804'],['Légifrance','https://www.legifrance.gouv.fr/'],['Min. Intérieur','https://www.interieur.gouv.fr/'],['GISTI','https://www.gisti.org/'],['Le Monde Immigration','https://www.lemonde.fr/immigration/']]
+  },
+  burocratica: {
+    color:'#063B35', icon:'📋', label:'Burocrática', count:10,
+    desc:'Passo a passos práticos que chegam na hora certa e convertem em picos de salvamentos.',
+    alvo:'P02',
+    sources:[['ANEF','https://administration-etrangers-en-france.interieur.gouv.fr/'],['CAF','https://www.caf.fr/'],['Ameli','https://www.ameli.fr/'],['URSSAF AE','https://www.autoentrepreneur.urssaf.fr/'],['Impots.gouv','https://www.impots.gouv.fr/']]
+  },
+  academica: {
+    color:'#577328', icon:'🎓', label:'Acadêmica & Profissional', count:10,
+    desc:'Alta autoridade em mercado de trabalho, diplomas e transição de carreira com dados do mundo real.',
+    alvo:'P02 · P03',
+    sources:[['ENIC-NARIC','https://www.france-education-international.fr/'],['France Travail','https://www.francetravail.fr/'],['Mon Compte Formation','https://www.moncompteformation.gouv.fr/'],['Campus France','https://www.campusfrance.org/'],['APEC','https://www.apec.fr/']]
+  },
+  civica: {
+    color:'#8FA5B8', icon:'🤝', label:'Cívica & Apoio', count:10,
+    desc:'Redes de pertencimento que fidelizam e constroem comunidade com raízes reais no território francês.',
+    alvo:'P03 · P04',
+    sources:[['CIUP','https://www.ciup.fr/'],['La Cimade','https://www.lacimade.org/'],['Singa France','https://www.singafrance.com/'],['Qualité FLE','https://www.qualitefle.fr/'],['Maisons Asso Paris','https://www.paris.fr/maisons-des-associations']]
+  },
+  financas: {
+    color:'#3D2B1F', icon:'💶', label:'Finanças Bi-Nacional', count:10,
+    desc:'Lacuna gigantesca de mercado — euros × reais e construção de patrimônio cruzado para quem já passou do choque inicial.',
+    alvo:'P03 · P04',
+    sources:[['BoursoBank','https://www.boursoramabank.com/'],['Café de la Bourse','https://www.cafedelabourse.com/'],['Receita Federal','https://www.gov.br/receitafederal/'],['INSEE','https://www.insee.fr/'],['Banco Central','https://www.bcb.gov.br/']]
+  },
+};
+
+const NEWS = {};
+NEWS.juridica = [
+    {
+      id:'j1', urgency:'alta', kpi:'Saves', date:'3 jun 2026',
+      personas:['P02','P03'], format:'Carrossel de Alta Urgência',
+      title:'O decreto que mudou os prazos do recurso de asilo — e o que isso significa para quem está no CNDA',
+      desc:'O Décret n° 2026-451, publicado em 3 de junho de 2026, revoga o art. L.342-19 do CESEDA e modifica os prazos de recurso perante a Cour Nationale du Droit d\'Asile (CNDA). Quem tem um processo em andamento precisa verificar imediatamente os novos prazos — a mudança é retroativa para procedimentos ainda não decididos. O texto está disponível integralmente no Légifrance.',
+      formatDetail:'Carrossel Off-White: capa "atenção se você tem um processo no CNDA — mudou o prazo de recurso". Slides 2–4: explicação objetiva do que mudou, quem é afetado, o que fazer agora. Último slide: CTA "acesse o Légifrance ou procure a La Cimade". KPI dominante: Saves + Shares em grupos de suporte jurídico.',
+      fonte:'Légifrance', fonteUrl:'https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000054209664',
+    },
+    {
+      id:'j2', urgency:'alta', kpi:'Watchtime + Saves', date:'24 abr 2026',
+      personas:['P02','P03'], format:'Vídeo YouTube + Carrossel',
+      title:'Novo decreto muda quem pode se inscrever no France Travail — e quais documentos são aceitos',
+      desc:'O Décret n° 2026-308, de 24 de abril de 2026, reformula as regras de inscrição de estrangeiros na lista de demandantes de emprego e atualiza as condições da <em>carte bleue européenne</em>. A lógica agora abandona a lista fechada de documentos e adota critério funcional: qualquer autorização de trabalho válida, incluindo <em>récépissé</em>, autoriza inscrição. Isso abre o acesso ao France Travail para quem está em renovação.',
+      formatDetail:'Vídeo YouTube 8–10 min: contexto legal → documentos agora aceitos → o que muda para quem está em renovação → passo a passo do cadastro online. Carrossel resumo para Instagram com os 5 documentos aceitos. Discovery alto para P02 que não sabia que já podia se inscrever.',
+      fonte:'Légifrance', fonteUrl:'https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000053957149',
+    },
+    {
+      id:'j3', urgency:'alta', kpi:'Watchtime + Saves', date:'jan 2026',
+      personas:['P01','P02','P03'], format:'Vídeo YouTube Evergreen',
+      title:'Francês B1 obrigatório para renovar o título plurianual: o que a lei CIAI exige de você agora',
+      desc:'O Décret n° 2025-647, em vigor desde 1º de janeiro de 2026, impõe obrigação de resultado (não mais de meios) no domínio do francês para obtenção de título plurianual ou de residente. Nível A2 para primeiros títulos, B1 para renovação plurianual, B2 para naturalização. O teste é realizado via OFII, com agendamentos esgotados meses à frente. Há isenções para condições específicas.',
+      formatDetail:'Vídeo YouTube 10–12 min com timestamps. Estrutura: qual nível para qual título → onde e como agendar o teste OFII → isenções → como usar o CPF para custeio do curso preparatório. Evergreen de alto watchtime durante todo 2026.',
+      fonte:'Légifrance', fonteUrl:'https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000051900489',
+    },
+    {
+      id:'j4', urgency:'alta', kpi:'Compartilhamentos', date:'12 jun 2026',
+      personas:['P02','P03','P04'], format:'Newsletter + Reel Análise',
+      title:'O Pacto Europeu de Asilo entrou em vigor hoje — e a França ainda não adotou sua lei de adaptação',
+      desc:'Em 12 de junho de 2026 o Pacto Europeu de Asilo e Imigração torna-se aplicável em todos os estados-membros. A La Cimade alerta: a França ainda não tem lei de adaptação aprovada — as eleições municipais de março e a Assemblée Nacional dividida criaram um vácuo legislativo. A incerteza afeta diretamente quem tem pedidos de proteção em andamento.',
+      formatDetail:'Reel 45s de análise: "hoje muda o direito de asilo na Europa — e a França está despreparada". Newsletter para P04 com análise das implicações concretas por perfil de situação. Compartilhamento alto em comunidades de apoio a refugiados e imigrantes.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/droit-dasile-quelle-adaptation-du-pacte-europeen-en-france/',
+    },
+    {
+      id:'j5', urgency:'alta', kpi:'Saves', date:'mai 2026',
+      personas:['P02','P03'], format:'Carrossel Tabela Visual',
+      title:'Aumento de até 363% nas taxas migratórias: quanto vai custar seu próximo título de residência',
+      desc:'A lei de finanças para 2026 elevou significativamente os <em>droits de timbre</em> cobrados em processos migratórios. A La Cimade documenta o impacto: taxas de regularização, naturalização e renovação subiram substancialmente sob a justificativa de "harmonização europeia". O aumento foi denunciado como mais um passo na precarização intencional da situação das pessoas estrangeiras.',
+      formatDetail:'Carrossel com tabela visual antes × depois por tipo de título. Capa Gliker: "quanto vai custar o seu próximo título?". Slides com o valor atualizado de cada procedimento. Último slide: onde buscar apoio gratuito se o custo inviabilizar o processo. Saves explosivos para P02/P03 com renovação próxima.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/presse/hausse-des-droits-de-timbre-un-nouveau-pas-vers-la-precarisation-des-personnes-etrangeres/',
+    },
+    {
+      id:'j6', urgency:'media', kpi:'Compartilhamentos', date:'jan 2026',
+      personas:['P02','P03','P04'], format:'Newsletter Análise',
+      title:'2 anos da lei Darmanin, 1 ano da circular Retailleau: o balanço alarmante que a La Cimade publicou',
+      desc:'A La Cimade publicou balanço de dois anos desde a aprovação da lei Darmanin e um ano da circular Retailleau sobre admissões excepcionais. O documento aponta redução drástica nas regularizações, aumento das expulsões e endurecimento das condições de acesso a títulos de residência. O relatório inclui dados por perfil — estudantes, trabalhadoras, reagrupamentos familiares.',
+      formatDetail:'Newsletter para P03/P04 com análise dos dados do relatório. Carrossel de síntese: 5 dados que revelam o endurecimento do sistema. Conteúdo de autoridade que fideliza audiência crítica e gera compartilhamentos em comunidades de suporte jurídico.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/presse/deux-ans-de-la-loi-darmanin-un-an-de-la-circulaire-retailleau-um-bilan-alarmant/',
+    },
+    {
+      id:'j7', urgency:'media', kpi:'Saves', date:'29 jun 2026',
+      personas:['P02','P03'], format:'Stories + Carrossel de Serviço',
+      title:'O GISTI faz uma meia-jornada gratuita sobre as novas exigências cívicas e linguísticas — inscreva-se',
+      desc:'O GISTI organiza em 29 de junho de 2026 uma demi-journée de informação sobre as novas exigências da lei CIAI — o exame cívico e os níveis de francês exigidos para manutenção e obtenção de títulos de residência e naturalização. O evento é aberto ao público e gratuito, com especialistas em direito dos estrangeiros. Uma oportunidade rara de entender a lei diretamente de quem a acompanha de perto.',
+      formatDetail:'Stories com contagem regressiva até o evento + link para inscrição. Carrossel "o que você vai aprender na demi-journée do GISTI": 4 perguntas que o evento responde. CTR alto para P02/P03 com título em renovação iminente.',
+      fonte:'GISTI', fonteUrl:'https://www.gisti.org/spip.php?rubrique33=',
+    },
+    {
+      id:'j8', urgency:'media', kpi:'Saves', date:'fev 2026',
+      personas:['P02','P03'], format:'Carrossel de Descoberta',
+      title:'Nota prática do GISTI: o que muda nos direitos das mulheres estrangeiras com as novas leis de 2026',
+      desc:'O GISTI publicou em fevereiro de 2026 nota prática atualizada sobre os direitos específicos das mulheres estrangeiras no contexto das mudanças legislativas de 2025–2026. O documento aborda situações de violência doméstica, reagrupamento familiar, títulos de residência autônomos e acesso à proteção. Disponível gratuitamente no site em formato PDF.',
+      formatDetail:'Carrossel "o que você tem direito de saber se é mulher estrangeira na França" — referência ao guia do GISTI com contexto prático para cada situação. Salvo massivamente por P02 que enfrenta processos de regularização. Compartilhado por assistentes sociais e acompanhantes jurídicos.',
+      fonte:'GISTI', fonteUrl:'https://www.gisti.org/',
+    },
+    {
+      id:'j9', urgency:'media', kpi:'CTR + Saves', date:'jan 2026',
+      personas:['P01','P02'], format:'Reel Explicativo',
+      title:'O contrato republicano que você vai ter que assinar — e o que ele exige de você na prática',
+      desc:'Desde julho de 2024, todo estrangeiro que solicita um documento de residência deve assinar um <em>contrat d\'engagement républicain</em> que inclui compromissos com os princípios da República. A partir de 2026, o descumprimento das obrigações do contrato de integração republicano (<em>CIR</em>) pode bloquear renovações. O Service-Public.fr detalha o que exatamente está sendo avaliado.',
+      formatDetail:'Reel explicativo 40s: "você sabia que terá que assinar um contrato para renovar seu título?" → o que está no contrato → quais são as obrigações concretas → como se preparar. Discovery alto para P01 em fase de pesquisa.',
+      fonte:'Service-Public.fr', fonteUrl:'https://www.service-public.fr/particuliers/actualites/A17534',
+    },
+    {
+      id:'j10', urgency:'media', kpi:'Compartilhamentos', date:'jan 2026',
+      personas:['P03','P04'], format:'Newsletter Análise Política',
+      title:'As 12 propostas da La Cimade para reformar a política migratória francesa — o que elas pedem',
+      desc:'A La Cimade publicou documento com 12 propostas concretas para uma política migratória mais humana: fim do encarceramento administrativo para situações específicas, facilitação das regularizações, revisão dos critérios de expulsão e fortalecimento dos direitos de recurso. O documento é uma referência para entender o que organizações de defesa dos direitos exigem do Estado francês.',
+      formatDetail:'Newsletter para P04 com análise das 12 propostas e probabilidade de adesão política. Carrossel de síntese: as 3 propostas com maior impacto para imigrantes brasileiras. Conteúdo de profundidade que constrói autoridade e gera comentários longos.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/',
+    },
+];
+NEWS.burocratica = [
+    {
+      id:'b1', urgency:'media', kpi:'Saves', date:'abr 2026',
+      personas:['P02'], format:'Carrossel com Checklist',
+      title:'Sua APL foi recalculada em abril — veja o que mudou e como verificar se o valor está correto',
+      desc:'A revalorização anual das ajudas de moradia da CAF entrou em vigor em 1º de abril de 2026, com pagamento efetivo a partir de maio. Os valores são ajustados por perfil de beneficiária: locação privada, alojamento universitário, casal com filhos. A atualização é automática, mas erros ocorrem — especialmente se houve mudança de renda, de situação familiar ou de endereço desde a última declaração de recursos.',
+      formatDetail:'Carrossel Off-White: capa "sua APL foi recalculada — veja se o valor está certo". Slide 2: como funciona o cálculo. Slide 3: situações que causam erro. Slide 4: checklist — o que verificar na conta CAF. Saves altíssimos para P02 recém-chegada que ainda não entende como funciona o sistema.',
+      fonte:'CAF', fonteUrl:'https://www.caf.fr/allocataires/aides-et-demarches/droits-et-prestations/logement/les-aides-personnelles-au-logement',
+    },
+    {
+      id:'b2', urgency:'media', kpi:'CTR + Saves', date:'jan 2026',
+      personas:['P01','P02'], format:'Carrossel Guia Completo',
+      title:'O Guia de Prestações da CAF 2026 saiu — tudo que você recebe (ou pode receber) em um só lugar',
+      desc:'A CAF publicou o Guia das Prestações 2026 com todos os valores atualizados para o ano: APL, ALF, ALS, RSA, aide à la garde d\'enfants, prestações familiares. O guia é a fonte oficial para saber exatamente a quanto você tem direito e em quais condições. Para imigrantes recém-chegadas, é o primeiro passo para entender quais auxílios são acessíveis a não-cidadãs.',
+      formatDetail:'Carrossel "tudo que a CAF pode te dar em 2026": uma prestação por slide com condição de elegibilidade simplificada. Capa Gliker: "você sabe tudo que pode pedir para a CAF?". Link para o guia completo no último slide. Saves explosivos para P01 e P02.',
+      fonte:'CAF', fonteUrl:'https://caf.fr/professionnels/presse/publications/aides-montants-demarches-le-guide-des-prestations-caf-2026-est-en-ligne',
+    },
+    {
+      id:'b3', urgency:'baixa', kpi:'Saves', date:'jan 2026',
+      personas:['P02'], format:'Stories + Salva Rápido',
+      title:'O calendário de pagamentos da CAF em 2026: salva agora para nunca ficar na dúvida',
+      desc:'A CAF publicou o calendário oficial de pagamentos para 2026. As datas variam conforme o tipo de prestação e mudam no caso de feriados. Ter essa informação na ponta dos dedos evita ansiedade desnecessária e facilita o planejamento mensal — especialmente para quem depende da APL para fechar o aluguel no prazo.',
+      formatDetail:'Stories sequenciais com as datas dos próximos 3 pagamentos. Um carrossel simples "salva e consulte quando precisar". Formato de serviço puro — baixo investimento de produção, alto valor percebido. Saves elevados entre P02 que ainda está aprendendo o ritmo do sistema francês.',
+      fonte:'CAF', fonteUrl:'https://www.caf.fr/allocataires/actualites/actualites-nationales/calendrier-des-versements-de-vos-aides-en-2026',
+    },
+    {
+      id:'b4', urgency:'media', kpi:'Saves + CTR', date:'jan 2026',
+      personas:['P02','P03'], format:'Reel Explicativo + Carrossel',
+      title:'O médico de família tem um novo sistema de pagamento em 2026 — e muda como o sistema te atende',
+      desc:'A Assurance Maladie implementou em janeiro de 2026 o novo <em>forfait médecin traitant</em> (FMT): uma remuneração anual por paciente, calibrada pela complexidade clínica (idade, doenças crônicas) e com parte variável por vacinação e rastreios. Na prática, o médico de família passa a ter mais incentivo financeiro para manter seus pacientes acompanhados. Para imigrantes sem médico traitant cadastrado, é o momento de fazer o cadastro.',
+      formatDetail:'Reel 30s: "entendeu o que mudou no sistema de saúde francês em 2026?". Carrossel: o que é o FMT → como isso te afeta → como fazer ou mudar o cadastro do médico traitant no Ameli. CTR e Saves para P02 que ainda não entende como funciona a saúde na França.',
+      fonte:'Ameli.fr', fonteUrl:'https://www.ameli.fr/medecin/exercice-liberal/facturation-remuneration/dispositif-medecin-traitant/nouveau-forfait-medecin-traitant-janvier-2026',
+    },
+    {
+      id:'b5', urgency:'media', kpi:'Saves', date:'jan–jun 2026',
+      personas:['P02','P03'], format:'Carrossel Passo a Passo',
+      title:'A convenção médica de 2024–2029 está sendo aplicada em 2026: o que mudou nas consultas e reembolsos',
+      desc:'A convenção médicale 2024–2029 previu um calendário progressivo de mudanças. Em 2026 entram em vigor novas consultas <em>ad hoc</em> e a segunda onda de revalorizações de tarifas em especialidades que atendem crianças, mulheres e idosos. Para imigrantes com <em>Carte Vitale</em>, a boa notícia: o reembolso base das consultas foi atualizado em algumas especialidades.',
+      formatDetail:'Carrossel "o que mudou nas consultas médicas em 2026?": especialidades afetadas → novos valores de reembolso → como funciona o <em>médecin traitant</em> dentro do sistema → onde verificar seus direitos no Ameli. Conteúdo de servisse que gera saves e é compartilhado entre P02.',
+      fonte:'Ameli.fr', fonteUrl:'https://www.assurance-maladie.ameli.fr/presse/2025-12-22-cp-convention-medicale-ce-qui-change-en-2026',
+    },
+    {
+      id:'b6', urgency:'alta', kpi:'Saves + Comentários', date:'jan 2026',
+      personas:['P03'], format:'Vídeo YouTube + Carrossel',
+      title:'A taxa da sua auto-empresa subiu em 2026 — e vai subir de novo em 2027: os números que você precisa saber',
+      desc:'A reforma da base social dos trabalhadores independentes elevou o teto global de cotizações dos <em>auto-entrepreneurs</em> em BNC de 24,6% → 25,6% a partir de 1º de janeiro de 2026 (e chegará a 26,1% em 2027). A distribuição interna também mudou: a CSG-CRDS diminui em favor das cotizações contributivas — o que melhora a aposentadoria futura, mas aumenta o custo imediato.',
+      formatDetail:'Vídeo YouTube 8 min: o que são cotizações sociais → impacto real no lucro líquido com exemplos em €500, €1000 e €2000/mês → o que muda com a redistribuição interna → como simular seu custo em mon-entreprise.urssaf.fr. Carrossel Instagram com os números-chave. Alto watch time para P03 empreendedora.',
+      fonte:'URSSAF Auto-entrepreneur', fonteUrl:'https://www.autoentrepreneur.urssaf.fr/portail/accueil/sinformer-sur-le-statut/toutes-les-actualites/auto-entrepreneurs---une-importa.html',
+    },
+    {
+      id:'b7', urgency:'media', kpi:'Saves', date:'jan 2026',
+      personas:['P03'], format:'Carrossel com Dados',
+      title:'Novo teto de faturamento da auto-empresa em 2026: quando você é obrigada a mudar de regime',
+      desc:'Em 2026, o teto de chiffre d\'affaires para permanecer no regime <em>auto-entrepreneur</em> é de €83.600 para serviços (BNC/BIC services). Quem ultrapassar esse teto em dois anos consecutivos é obrigada a migrar para o regime real dos trabalhadores independentes — com contabilidade, declarações mais complexas e cotizações calculadas de forma diferente.',
+      formatDetail:'Carrossel "você sabe quando tem que sair do regime auto-entrepreneur?": o teto por atividade → o que acontece se ultrapassar → como planejar a transição → ferramentas gratuitas para simular. Conteúdo que P03 salva para consultar quando chegar perto do limite.',
+      fonte:'URSSAF Auto-entrepreneur', fonteUrl:'https://www.autoentrepreneur.urssaf.fr/portail/accueil/sinformer-sur-le-statut/toutes-les-actualites/2026--modification-des-seuils-de.html',
+    },
+    {
+      id:'b8', urgency:'media', kpi:'Saves + Comentários', date:'mai 2026',
+      personas:['P03','P04'], format:'Newsletter com Checklist',
+      title:'O que mudou na declaração de imposto de renda em 2026 — especialmente se você mora na França mas ainda tem renda no Brasil',
+      desc:'A declaração de rendimentos 2026 traz novidades: desmaterialização total dos avisos de imposto (o papel vira exceção), dupla autenticação no espaço pessoal e prazo para não-residentes fixado em 21 de maio de 2026. Atenção: quem estava na França mas nunca declarou lá deve usar formulário em papel na primeira declaração — o sistema online rejeita primeiras declarações de não-residentes.',
+      formatDetail:'Newsletter com checklist de 6 etapas para declaração correta. Inclui orientações específicas para a situação mais comum entre a audiência: quem tem renda francesa e patrimônio/renda no Brasil. Conteúdo técnico que gera comentários "salvou minha vida" e fideliza P03/P04.',
+      fonte:'Impots.gouv.fr', fonteUrl:'https://www.impots.gouv.fr/quoi-de-neuf-pour-la-declaration-de-revenus-en-2026',
+    },
+    {
+      id:'b9', urgency:'media', kpi:'CTR + Saves', date:'mai 2026',
+      personas:['P01','P02','P03'], format:'Reel + Carrossel Passo a Passo',
+      title:'Você mora na França mas ainda é considerada residente fiscal do Brasil — e isso tem consequências sérias',
+      desc:'O <em>impots.gouv.fr</em> esclarece: não-residentes com rendas de fonte francesa são tributados na França pelas regras específicas de não-residência, mas continuam obrigados a declarar no Brasil até formalizarem a saída definitiva. A combinação das duas declarações exige atenção à Convenção Fiscal Brasil-França para evitar dupla tributação — e o prazo para não-residentes em 2026 foi 21 de maio.',
+      formatDetail:'Reel 35s: "você mora na França e ainda declara no Brasil? assiste isso". Carrossel passo a passo: como verificar seu status fiscal → o que a França tributa → o que o Brasil ainda exige → onde usar a Convenção Fiscal. Alto alcance para P01 que está planejando a mudança.',
+      fonte:'Impots.gouv.fr', fonteUrl:'https://www.impots.gouv.fr/les-modalites-de-la-declaration-de-revenus-en-2026',
+    },
+    {
+      id:'b10', urgency:'media', kpi:'Saves', date:'jan–jun 2026',
+      personas:['P02','P03'], format:'Carrossel Guia de Uso',
+      title:'Tudo que você pode resolver online pelo ANEF — e o que ainda exige ida à prefeitura',
+      desc:'A plataforma ANEF (<em>Administration Numérique pour les Étrangers en France</em>) centraliza os pedidos de título de residência, renovações, <em>passeport talent</em> e alterações de situação — tudo sem sair de casa. Mas atenção: nem todos os tipos de pedidos estão disponíveis online. Alguns casos ainda exigem atendimento presencial na prefeitura, sob pena de não protocolar corretamente.',
+      formatDetail:'Carrossel "o que você pode e não pode resolver pelo ANEF": lista visual de procedimentos disponíveis vs. que ainda vão à prefeitura. Como acessar o sistema → como acompanhar seu processo → o que fazer se o sistema bloquear o pedido. Evergreen de Saves para P02 recém-chegada.',
+      fonte:'ANEF – Ministère de l\'Intérieur', fonteUrl:'https://administration-etrangers-en-france.interieur.gouv.fr/',
+    },
+];
+NEWS.academica = [
+    {
+      id:'a1', urgency:'media', kpi:'Saves', date:'24 abr 2026',
+      personas:['P02','P03'], format:'Carrossel Passo a Passo',
+      title:'Novo decreto facilita inscrição no France Travail para estrangeiras em renovação de título',
+      desc:'O Décret n° 2026-308 de 24 de abril adotou um critério funcional: qualquer documento que autorize trabalho assalariado — inclusive <em>récépissé</em> de renovação — permite inscrição no France Travail. Antes, a lista fechada de documentos aceitos excluía muitas imigrantes em transição administrativa, cortando acesso a treinamentos, suporte de busca de emprego e às vezes benefícios.',
+      formatDetail:'Carrossel Off-White: capa "você pode entrar no France Travail mesmo em renovação?". Slides com documentos aceitos (visual direto) → o que você acessa ao se inscrever → passo a passo do cadastro. Descoberta útil que define o Por Dentro — Saves altíssimos para P02.',
+      fonte:'France Travail', fonteUrl:'https://www.francetravail.fr/candidat/mes-droits-aux-aides-et-allocati/a-chaque-situation-son-allocatio/quelle-est-ma-situation-personne/je-suis-travailleur-etranger--pu.html',
+    },
+    {
+      id:'a2', urgency:'alta', kpi:'CTR + Saves', date:'jan 2026',
+      personas:['P02','P03'], format:'Reel Explicativo + Carrossel',
+      title:'O atestado ENIC-NARIC não vale mais para naturalização — o que mudou e o que ainda serve',
+      desc:'O Décret n° 2025-648 de 15 de julho de 2025, em vigor desde 1º de janeiro de 2026, retirou a validade da attestation de comparabilité emitida pelo centro ENIC-NARIC para pedidos de naturalização. Quem usava esse documento como prova de qualificação para a naturalização precisa substituí-lo por documentação alternativa. Para candidaturas profissionais e acadêmicas, o atestado continua válido.',
+      formatDetail:'Reel 35s: "você usava o ENIC-NARIC para naturalização? mudou." Carrossel: o que o atestado ainda serve → o que não serve mais → o que usar no lugar → onde consultar. CTR e Saves altíssimos para P03 que tem naturalização no horizonte.',
+      fonte:'France Education International – ENIC-NARIC', fonteUrl:'https://www.france-education-international.fr/article/les-procedures-devaluation-des-diplomes-au-centre-enic-naric-france?langue=en',
+    },
+    {
+      id:'a3', urgency:'media', kpi:'Saves', date:'jan–jun 2026',
+      personas:['P02','P03'], format:'Carrossel Passo a Passo',
+      title:'Como funciona o reconhecimento do seu diploma estrangeiro no ENIC-NARIC: prazos, custos e o que você recebe',
+      desc:'O processo de reconhecimento de diplomas no centro ENIC-NARIC France é inteiramente online. Custo: €20 na admissibilidade + €100 na avaliação técnica. Refugiadas, solicitantes de asilo e pessoas com proteção subsidiária têm isenção total. O prazo médio de processamento após a avaliação é de 4 a 6 meses. O atestado resultante é reconhecido por empregadores, universidades e serviços públicos franceses.',
+      formatDetail:'Carrossel "guia completo: como reconhecer seu diploma na França". Etapa a etapa com capturas de tela simuladas do portal. Custo total, o que enviar, o que esperar no atestado. Saves altíssimos — conteúdo que P02 e P03 salvam antes de iniciar o processo.',
+      fonte:'France Education International – ENIC-NARIC', fonteUrl:'https://www.france-education-international.fr/hub/reconnaissance-de-diplomes',
+    },
+    {
+      id:'a4', urgency:'media', kpi:'Alcance + Comentários', date:'abr 2026',
+      personas:['P01','P02','P03'], format:'Vídeo YouTube + Reel',
+      title:'305.800 vagas para cadres em 2026 — e o primeiro trimestre já superou as expectativas',
+      desc:'A APEC projeta 305.800 recrutamentos de cadres em 2026 (+4% vs. 2025), retomada após dois anos de queda. O barómetro do 1º trimestre confirmou os dados: as contratações estão sob melhores auspícios. Os perfis mais buscados: informáticos (61.160 vagas), engenheiros de P&D (52.000) e comerciais (51.990). Para brasileiras com formação técnica, é uma janela real de inserção.',
+      formatDetail:'Vídeo YouTube 8 min: o que diz o relatório da APEC → quais perfis estão em alta → o que isso significa para quem tem diploma estrangeiro → como posicionar o CV para o mercado de cadres. Reel snack: "305 mil vagas de nível sênior abertas na França em 2026". Alto alcance para P01.',
+      fonte:'APEC', fonteUrl:'https://corporate.apec.fr/home/nos-etudes/toutes-nos-etudes/previsions-de-recrutements-de-cadres-2026.html',
+    },
+    {
+      id:'a5', urgency:'media', kpi:'Saves + Watchtime', date:'abr 2026',
+      personas:['P03','P04'], format:'Newsletter + Vídeo YouTube',
+      title:'O que o barómetro APEC do 1º trimestre de 2026 diz sobre as chances de ascensão profissional na França',
+      desc:'O Baromètre APEC du 1er trimestre 2026 mostra recuperação do mercado de cadres após dois anos de retração. PMEs lideram com 65% dos recrutamentos. Os setores com maior dinamismo: tecnologia, saúde e engenharia. Para brasileiras já estabelecidas no mercado francês, é o momento de posicionar uma promoção ou transição de cargo — o mercado está mais receptivo.',
+      formatDetail:'Newsletter para P03/P04 com análise do barómetro: quais setores estão contratando, salários médios de cadre por setor, como se posicionar. Vídeo YouTube 10 min: "como usar o barómetro da APEC para planejar a sua carreira na França". Watch time alto entre audiência qualificada.',
+      fonte:'APEC', fonteUrl:'https://corporate.apec.fr/home/nos-etudes/toutes-nos-etudes/barometre-apec-1er-trimestre-2026.html',
+    },
+    {
+      id:'a6', urgency:'alta', kpi:'CTR + Conversão', date:'31 mai 2026',
+      personas:['P01','P02'], format:'Stories + Reel Urgência',
+      title:'Bolsa Master 2 para brasileiras na França com inscrições até 31 de maio — se você ainda não viu, corre',
+      desc:'O Campus France Brasil publicou edital de Bolsas de Excelência para Master 2 com prazo de candidatura em 31 de maio de 2026 às 23:59 (horário de Brasília). Destinada a brasileiras residentes no Brasil, com menos de 35 anos, que ingressarão no segundo ano de mestrado em instituição pública francesa no ano letivo 2026–2027. Os resultados serão divulgados em 12 de junho de 2026.',
+      formatDetail:'Stories urgentes com contagem regressiva. Reel 30s com as condições e link para o edital. CTR altíssimo para P01 em fase de pesquisa sobre estudo na França. Compartilhamento orgânico em grupos universitários brasileiros.',
+      fonte:'Campus France Brasil', fonteUrl:'https://www.bresil.campusfrance.org/',
+    },
+    {
+      id:'a7', urgency:'alta', kpi:'CTR', date:'9 jun 2026',
+      personas:['P01','P02'], format:'Stories + Carrossel',
+      title:'CAPES-COFECUB 2027: prazo de candidatura encerra em 9 de junho — pesquisadoras, atenção',
+      desc:'O programa de cooperação CAPES-COFECUB abre editais para projetos de pesquisa conjunta Brasil-França com vigência a partir de 2027. O prazo para submissão de candidaturas é 9 de junho de 2026. Financiado pelo Ministério das Relações Exteriores francês e pela CAPES, o programa cobre mobilidade de pesquisadoras e professoras dos dois países por até 4 anos.',
+      formatDetail:'Stories com prazo + link direto para o edital no Campus France. Carrossel "como funciona o CAPES-COFECUB": quem pode candidatar → o que cobre → como submeter. CTR alto para P01/P02 em contexto universitário.',
+      fonte:'Campus France', fonteUrl:'https://www.campusfrance.org/fr/capes-cofecub',
+    },
+    {
+      id:'a8', urgency:'alta', kpi:'Saves + Comentários', date:'abr 2026',
+      personas:['P02','P03'], format:'Reel + Carrossel',
+      title:'O CPF agora tem participação obrigatória de €150 — o que mudou para quem queria fazer curso gratuito',
+      desc:'A partir de 1º de abril de 2026, a lei de finanças para 2026 instituiu participação financeira obrigatória de €150 para mobilizar créditos do CPF (Compte Personnel de Formation). Antes, a maioria dos cursos era 100% custeada. Exceções existem: desempregados com acompanhamento pelo France Travail, pessoas em reconversão profissional. Para trabalhadoras com carteira, o impacto é real.',
+      formatDetail:'Reel 35s: "o CPF agora cobra €150 de você — como isso afeta seus planos de formação?". Carrossel: o que mudou → as exceções → como usar o CPF mesmo com a participação → alternativas gratuitas (formações pelo France Travail). Saves e comentários para P02/P03.',
+      fonte:'Mon Compte Formation', fonteUrl:'https://of.moncompteformation.gouv.fr/actualites/loi-de-finances-2026-les-evolutions-concernant-le-cpf',
+    },
+    {
+      id:'a9', urgency:'media', kpi:'Compartilhamentos + Watchtime', date:'mar 2026',
+      personas:['P01','P03','P04'], format:'Vídeo YouTube com Dados',
+      title:'O desemprego subiu para 8,1% na França em 2026 — o que os dados do INSEE dizem sobre o mercado real',
+      desc:'A nota de conjuntura do INSEE de março de 2026 (Inflation ravivée, croissance fragilisée) mostra desemprego de 8,1% no 1º trimestre, inflação de 1,7% a/a em março acelerada por energia (+7,4%). O poder de compra das famílias deve cair ligeiramente no primeiro semestre. Para imigrantes, o cenário exige estratégia de inserção mais cirúrgica — as vagas existem, mas os dados indicam onde.',
+      formatDetail:'Vídeo YouTube 10 min: o que diz a nota do INSEE → o que significa "crescimento fragilizado" para quem está entrando no mercado → setores em crescimento vs. retração → dicas de posicionamento. Tom investigativo com dados em tela. Watchtime alto + compartilhamentos entre P04.',
+      fonte:'INSEE', fonteUrl:'https://www.insee.fr/fr/statistiques/8907421?sommaire=8907467',
+    },
+    {
+      id:'a10', urgency:'media', kpi:'Saves', date:'jan–jun 2026',
+      personas:['P02'], format:'Carrossel Guia de Uso',
+      title:'Quem pode se inscrever no France Travail? O guia completo para estrangeiras na França',
+      desc:'O France Travail (ex-Pôle Emploi) permite inscrição de estrangeiras com qualquer autorização de trabalho válida: <em>titre de séjour</em> com menção "salarié", <em>récépissé</em> de renovação, <em>visa long séjour</em> de 4 a 12 meses com autorização de trabalho e beneficiárias de proteção subsidiária ou solicitantes de asilo com status reconhecido. A inscrição é feita online sem necessidade de comparecimento presencial.',
+      formatDetail:'Carrossel "você pode se inscrever no France Travail? veja sua situação". Formato visual com os documentos aceitos, o que você acessa ao se inscrever e o passo a passo do cadastro em francetravail.fr. Evergreen de Saves para P02 recém-chegada.',
+      fonte:'France Travail', fonteUrl:'https://www.francetravail.fr/faq/candidat/minscrire---me-reinscrire/generalites/qui-peut-sinscrire-a--france-tra.html',
+    },
+];
+NEWS.civica = [
+    {
+      id:'c1', urgency:'media', kpi:'Saves + Compartilhamentos', date:'mai 2026',
+      personas:['P02','P03','P04'], format:'Newsletter + Carrossel',
+      title:'MiCRAcosme n°41: o boletim de maio da La Cimade resume tudo que mudou no mundo das migrações',
+      desc:'O MiCRAcosme é a publicação mensal da La Cimade que monitora mudanças legislativas, decisões jurisprudenciais e movimentos políticos relacionados às migrações na França e na Europa. A edição n°41 de maio de 2026 cobre a implementação do Pacto Europeu, o impacto da hausse dos <em>droits de timbre</em> e novidades sobre os centros de retenção. É a melhor forma de manter-se atualizada sem ler decretos brutos.',
+      formatDetail:'Carrossel: "o que mudou no mundo das migrações em maio 2026 — 5 fatos que você precisa saber". Baseado no MiCRAcosme, traduzindo para o português com contexto prático. Newsletter para P04 com análise aprofundada. Saves + compartilhamentos em grupos de acompanhamento jurídico.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/publication/micracosme-n41-mai-2026/',
+    },
+    {
+      id:'c2', urgency:'alta', kpi:'Saves', date:'mai 2026',
+      personas:['P02','P03'], format:'Carrossel Tabela Visual',
+      title:'Aumento histórico nas taxas de imigração — e o que a La Cimade diz sobre o impacto real nas famílias',
+      desc:'A La Cimade documentou o aumento substancial dos <em>droits de timbre</em> migratórios incluídos na lei de finanças para 2026, denunciando o efeito de exclusão financeira para famílias de baixa renda que precisam regularizar sua situação. O documento inclui exemplos concretos de quanto uma família paga hoje para manter dois títulos + uma naturalização, comparado com os valores anteriores.',
+      formatDetail:'Carrossel tabela visual: quanto custam hoje os principais procedimentos migratórios por perfil de família. Capa Gliker: "sabes quanto vai custar regularizar sua família?". Saves explosivos para P02/P03 com processos pendentes.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/presse/hausse-des-droits-de-timbre-un-nouveau-pas-vers-la-precarisation-des-personnes-etrangeres/',
+    },
+    {
+      id:'c3', urgency:'alta', kpi:'Compartilhamentos', date:'jun 2026',
+      personas:['P02','P03','P04'], format:'Reel Análise + Newsletter',
+      title:'O Pacto Europeu de Asilo entrou em vigor — e a La Cimade monitora o impacto em tempo real',
+      desc:'Com a aplicação do Pacto Europeu de Asilo e Imigração em 12 de junho de 2026, a La Cimade publicou análise sobre quais elementos do Pacto a França ainda não implementou por lei interna. O monitoramento inclui o novo procedimento de fronteira, as novas regras de determinação de responsabilidade entre estados-membros e o impacto sobre quem já tem pedido em andamento.',
+      formatDetail:'Reel análise 45s: "o que o Pacto Europeu muda concretamente para você". Newsletter para P04 com análise dos pontos de incerteza e o que monitorar nos próximos meses. Shares em grupos de acompanhamento de políticas migratórias.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/droit-dasile-quelle-adaptation-du-pacte-europeen-en-france/',
+    },
+    {
+      id:'c4', urgency:'media', kpi:'Compartilhamentos', date:'jan 2026',
+      personas:['P03','P04'], format:'Newsletter Análise',
+      title:'2 anos da lei Darmanin: o que o relatório da La Cimade revelou sobre regularizações e expulsões',
+      desc:'O balanço da La Cimade de dois anos da lei Darmanin e um ano da circular Retailleau sobre admissão excepcional mostra queda expressiva no número de regularizações por considerações humanitárias e aumento nas medidas de afastamento. O documento inclui dados por perfil (trabalho, família, estudantes) e análise do impacto da circular que restringiu a discricionariedade dos prefeitos.',
+      formatDetail:'Newsletter densa para P04: análise dos dados do relatório com contexto histórico e implicações práticas. Carrossel de síntese: 5 dados do relatório que revelam o estado real do sistema. Compartilhamentos em comunidades de suporte jurídico e monitoramento de políticas migratórias.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/presse/deux-ans-de-la-loi-darmanin-un-an-de-la-circulaire-retailleau-um-bilan-alarmant/',
+    },
+    {
+      id:'c5', urgency:'media', kpi:'CTR + Saves', date:'jan 2026',
+      personas:['P03','P04'], format:'Newsletter + Carrossel',
+      title:'As 12 propostas da La Cimade para reformar a política migratória: o que organizações de defesa exigem do Estado',
+      desc:'A La Cimade publicou 12 propostas para uma política migratória centrada nos direitos: fim da detenção administrativa para vulneráveis, regularização por trabalho e laços familiares, revisão dos critérios de expulsão e acesso garantido ao recurso judicial. O documento posiciona a organização no debate político e é referência para entender o que os defensores dos direitos dos imigrantes consideram justo.',
+      formatDetail:'Newsletter para P04 com análise das propostas e probabilidade política de adoção. Carrossel "3 propostas da La Cimade que mudariam a vida de imigrantes amanhã". CTR e Saves altos entre audiência que acompanha ativamente o debate político francês.',
+      fonte:'La Cimade', fonteUrl:'https://www.lacimade.org/',
+    },
+    {
+      id:'c6', urgency:'media', kpi:'Saves + CTR', date:'29 jun 2026',
+      personas:['P02','P03'], format:'Stories + Carrossel de Serviço',
+      title:'O GISTI abre evento gratuito sobre CIAI em 29 de junho — tudo sobre o exame cívico e o francês obrigatório',
+      desc:'O GISTI organiza demi-journée informativa em 29 de junho de 2026 dedicada às novas exigências cívicas e linguísticas introduzidas pela lei CIAI (Contrôle de l\'Immigration, Asile, Intégration). Especialistas em direito dos estrangeiros vão explicar o que é exigido, de quem, em que prazo e como contestar exigências indevidas. Evento aberto ao público, gratuito, em Paris.',
+      formatDetail:'Stories com contagem regressiva + link de inscrição. Carrossel "o que o evento do GISTI vai responder": 4 perguntas concretas que o evento trata. CTR alto para P02/P03 com renovação iminente ou que precisam do exame cívico.',
+      fonte:'GISTI', fonteUrl:'https://www.gisti.org/spip.php?rubrique33=',
+    },
+    {
+      id:'c7', urgency:'media', kpi:'Saves', date:'fev 2026',
+      personas:['P02','P03'], format:'Carrossel de Descoberta',
+      title:'O GISTI publicou um guia específico para mulheres estrangeiras — e ele pode mudar como você entende seus direitos',
+      desc:'A nota prática do GISTI de fevereiro de 2026 sobre os direitos das mulheres estrangeiras cobre situações específicas: violência doméstica e o direito a título independente do cônjuge, reagrupamento familiar, acesso à proteção complementar, regularização por laços familiares. Disponível em PDF gratuito no site do GISTI — uma das publicações mais práticas para quem navega o sistema sozinha.',
+      formatDetail:'Carrossel "o que o guia do GISTI te diz sobre seus direitos como mulher estrangeira na França". Uma situação por slide com a referência jurídica correspondente. Link para o PDF no último slide. Saves altos entre P02 que está regularizando a situação e P03 que está em processo de naturalização.',
+      fonte:'GISTI', fonteUrl:'https://www.gisti.org/',
+    },
+    {
+      id:'c8', urgency:'media', kpi:'CTR', date:'jun 2026',
+      personas:['P01','P02'], format:'Stories + Carrossel',
+      title:'Bolsas CIUP 2026–2027 com prazo em 26 de junho — a Cité Internationale acolhe 12.000 estudantes de 150 países',
+      desc:'A Cité Internationale Universitaire de Paris (CIUP) recebe candidaturas para bolsas de moradia e participação nos programas de residência artística e acadêmica para 2026–2027. O prazo de submissão de candidaturas é 26 de junho de 2026. Com 12.000 residentes de 150 nacionalidades por ano, a CIUP é um dos maiores hubs de integração cultural para estudantes e pesquisadoras estrangeiras em Paris.',
+      formatDetail:'Stories: "prazo em 26 de junho — bolsas CIUP 2026–2027". Carrossel "quem pode candidatar para a CIUP?": tipos de bolsas, condições e link direto. CTR alto para P01 que está planejando estudar em Paris.',
+      fonte:'CIUP', fonteUrl:'https://www.ciup.fr/',
+    },
+    {
+      id:'c9', urgency:'media', kpi:'Compartilhamentos', date:'2026',
+      personas:['P02','P03'], format:'Carrossel + Reel Inspiracional',
+      title:'A Singa France tem rede em 10 cidades francesas — e você provavelmente ainda não sabe o que ela oferece',
+      desc:'A Singa France conecta recém-chegadas (refugiadas, solicitantes de asilo, imigrantes) com redes locais em Bordeaux, Lille, Lyon, Marseille, Nantes, Paris, Saint-Étienne, Strasbourg, Toulouse e Valence. O programa J\'accueille tornou-se associação autônoma. A organização também acaba de ter mudança na direção de coordenação. Para brasileiras recém-chegadas, é uma das redes de inserção mais eficientes e gratuitas da França.',
+      formatDetail:'Carrossel "o que a Singa France faz e como ela pode te ajudar na sua cidade". Reel inspiracional com relato de participante anterior (formato UGC). Compartilhamentos altos em grupos de brasileiras recém-chegadas.',
+      fonte:'Singa France', fonteUrl:'https://singafrance.com/histoires/singa-en-france-changement-de-direction-et-autonomisation-jaccueille',
+    },
+    {
+      id:'c10', urgency:'baixa', kpi:'Saves', date:'jan–jun 2026',
+      personas:['P02','P03'], format:'Carrossel Guia',
+      title:'O Label Qualité FLE: como escolher uma escola de francês séria e não jogar dinheiro fora',
+      desc:'O Label Qualité FLE é a certificação oficial que distingue centros de ensino de francês língua estrangeira com padrões pedagógicos validados pelo Estado francês. Gerido pela France Education International, o label garante qualidade de ensino, qualidade de acolhimento e seriedad das certificações emitidas. Para quem precisa de certificação válida para renovação de título ou naturalização, escolher um centro credenciado não é opcional.',
+      formatDetail:'Carrossel "como escolher uma escola de francês séria na França": o que é o label Qualité FLE → por que importa → como consultar a lista de centros credenciados → diferença entre curso CPF-éligible e não éligible. Evergreen com Saves sólidos para P02.',
+      fonte:'Qualité FLE', fonteUrl:'https://www.qualitefle.fr/',
+    },
+];
+NEWS.financas = [
+    {
+      id:'f1', urgency:'media', kpi:'Watchtime + Comentários', date:'jan 2026',
+      personas:['P03','P04'], format:'Vídeo YouTube com Simulações',
+      title:'PEA ou Assurance Vie em 2026: a comparação fiscal que vai mudar como você investe seus euros',
+      desc:'O PEA (Plan d\'Épargne en Actions) e a Assurance Vie são os dois produtos de investimento mais usados por residentes fiscais na França. Em 2026, o PEA oferece isenção total de IR após 5 anos de detenção (apenas <em>prélèvements sociaux</em> de 17,2%), com plafond de €150.000. A Assurance Vie tem maior flexibilidade de produtos e vantagens de transmissão. A BoursoBank oferece PEA sem anuidade com prime de até €150 para abertura em 2026.',
+      formatDetail:'Vídeo 12–15 min com simulações numéricas: €500/mês × 10 anos nos dois produtos. Comparativo visual de cenários de retirada. Descrição com links para simuladores. Conteúdo que P04 assiste integralmente e compartilha. Watchtime alto + comentários de dúvidas específicas.',
+      fonte:'BoursoBank', fonteUrl:'https://www.boursobank.com/bourse/pea-plan-epargne-actions',
+    },
+    {
+      id:'f2', urgency:'media', kpi:'Saves', date:'jan 2026',
+      personas:['P03','P04'], format:'Carrossel Comparativo Visual',
+      title:'PEA vs Assurance Vie: o comparativo do Café de la Bourse que explica qual abrir primeiro',
+      desc:'O Café de la Bourse publicou comparativo atualizado para 2026: PEA ganha na fiscalidade de longo prazo (isenção de IR após 5 anos), mas limita os produtos aos valores europeus. Assurance Vie ganha na flexibilidade de produtos e nas condições de transmissão. A estratégia dominante entre investidores residentes: abrir os dois o quanto antes para fazer os contadores fiscais correrem em paralelo — independente do valor inicial.',
+      formatDetail:'Carrossel visual "PEA ou Assurance Vie — por onde começar?": tabela de vantagens/desvantagens → quando cada um vence → estratégia para brasileiras na França com horizonte de 5+ anos. Saves explosivos para P03 que está começando a investir em euros.',
+      fonte:'Café de la Bourse', fonteUrl:'https://www.cafedelabourse.com/actualites/compte-titres-pea-assurance-vie-placement-choisir',
+    },
+    {
+      id:'f3', urgency:'media', kpi:'Saves', date:'jan 2026',
+      personas:['P03','P04'], format:'Carrossel Passo a Passo',
+      title:'O melhor PEA de 2026 segundo o Café de la Bourse — e o que analisar antes de abrir o seu',
+      desc:'O comparativo anual do Café de la Bourse classifica as melhores corretoras para PEA em 2026 por critérios de taxa de custódia (zero em várias), custo por ordem, qualidade da plataforma e variedade de ETFs disponíveis. BoursoBank e Fortuneo lideram pela ausência de anuidade. Para brasileiras ainda sem nenhum produto de investimento na França, o PEA é geralmente o primeiro passo recomendado.',
+      formatDetail:'Carrossel "como escolher onde abrir seu PEA em 2026": os critérios que importam → comparativo visual das 3 melhores opções → o que verificar antes de assinar → link para o comparativo completo. Saves altos para P03 que está no estágio de pesquisa.',
+      fonte:'Café de la Bourse', fonteUrl:'https://www.cafedelabourse.com/bourse/comparatif-meilleur-pea',
+    },
+    {
+      id:'f4', urgency:'media', kpi:'Watchtime + Saves', date:'jan 2026',
+      personas:['P03','P04'], format:'Vídeo YouTube',
+      title:'5 práticas de quem investe bem em 2026 na França — e como adaptar para a realidade de quem vive entre dois países',
+      desc:'O Café de la Bourse publicou as 5 boas práticas para investir na Bolsa em 2026: diversificação via ETFs de índice mundial, automatização dos aportes mensais, não tentar prever o mercado, manter horizonte de 10+ anos e usar o PEA para maximizar a fiscalidade. Para brasileiras com ativos nos dois países, a prática mais crítica é definir onde mora o centro de sua vida fiscal — o que determina qual sistema usa.',
+      formatDetail:'Vídeo YouTube 10 min: as 5 práticas com exemplos concretos em euros → adaptação para quem tem ativos no Brasil → como equilibrar investimentos em euros e reais. Watchtime alto para P04 + saves para consultar depois.',
+      fonte:'Café de la Bourse', fonteUrl:'https://www.cafedelabourse.com/bourse/bonnes-resolutions-investir-bourse',
+    },
+    {
+      id:'f5', urgency:'alta', kpi:'Saves + Respostas Diretas', date:'mai 2026',
+      personas:['P03','P04'], format:'Newsletter com Checklist',
+      title:'A DSDP que você provavelmente ainda não entregou — e as multas que estão acumulando no Brasil',
+      desc:'A Declaração de Saída Definitiva do País (DSDP) é obrigatória para quem saiu do Brasil em caráter definitivo ou tornou-se não-residente fiscal. Quem não a entregou continua obrigado a declarar como residente no Brasil, acumulando multas. O prazo da DSDP segue o da Declaração de Ajuste Anual — último dia útil de maio. O saldo de imposto é pago em cota única na mesma data.',
+      formatDetail:'Newsletter com checklist de 8 etapas: o que é DSDP → como entregar → o que declarar no último ano como residente → como comunicar fontes pagadoras brasileiras → o que fazer com conta bancária no Brasil → como usar a Convenção Brasil-França. Gera alto volume de respostas diretas e fideliza P03/P04.',
+      fonte:'Receita Federal do Brasil', fonteUrl:'https://www.gov.br/receitafederal/pt-br/assuntos/meu-imposto-de-renda/preenchimento/dsdp',
+    },
+    {
+      id:'f6', urgency:'media', kpi:'CTR + Saves', date:'mar 2026',
+      personas:['P03','P04'], format:'Carrossel Passo a Passo',
+      title:'A Receita Federal publicou as regras do IR 2026 — o que mudou para quem mora fora do Brasil',
+      desc:'A Receita Federal anunciou em março de 2026 as regras para a DIRPF 2026 (ano-base 2025). Para não-residentes com renda de fonte brasileira, as regras de tributação na fonte seguem alíquotas específicas e a declaração cobre apenas o período em que a pessoa ainda era residente fiscal do Brasil. O prazo da declaração de último ano como residente foi último dia útil de maio de 2026.',
+      formatDetail:'Carrossel: "você mora na França e ainda tem renda no Brasil? veja o que a Receita Federal mudou em 2026". Passo a passo do que declarar, quando e como, com foco na situação mais comum da audiência. CTR e Saves altos para P03 com patrimônio ou aluguéis no Brasil.',
+      fonte:'Receita Federal do Brasil', fonteUrl:'https://www.gov.br/fazenda/pt-br/assuntos/noticias/2026/marco/receita-federal-anuncia-regras-para-declaracao-do-imposto-de-renda-da-pessoa-fisica-2026',
+    },
+    {
+      id:'f7', urgency:'media', kpi:'Saves', date:'jan–jun 2026',
+      personas:['P03','P04'], format:'Carrossel com Dados',
+      title:'Quanto de IOF você paga quando manda dinheiro do Brasil para a França — e como pagar menos',
+      desc:'O IOF nas remessas internacionais varia conforme a finalidade em 2026: 0,38% para transferências a terceiros, 1,10% para transferências a conta própria caracterizadas como investimento, 3,5% para educação e manutenção no exterior. A classificação correta da operação é responsabilidade do remetente e pode ser contestada. Transferências via corretoras autorizadas como Wise e Remessa Online aplicam a alíquota correta automaticamente.',
+      formatDetail:'Carrossel tabela de alíquotas: cada finalidade com o percentual correspondente e exemplos em valores reais (€500, €1.000, €2.000 enviados). Como a classificação errada aumenta o custo. Ferramentas recomendadas para fazer a transferência com IOF correto. Saves altos para P03 que manda dinheiro regularmente.',
+      fonte:'Banco Safra / IOF 2026', fonteUrl:'https://oespecialista.safra.com.br/iof-no-cambio-remessas-exterior-2026/',
+    },
+    {
+      id:'f8', urgency:'media', kpi:'Watchtime + Saves', date:'jan 2026',
+      personas:['P03','P04'], format:'Vídeo YouTube + Newsletter',
+      title:'A Convenção Brasil-França que evita a dupla tributação — como ela funciona na prática para quem mora nos dois mundos',
+      desc:'O acordo de bitributação Brasil-França garante que rendimentos não sejam tributados duas vezes. Na prática: salários franceses tributados na França não são tributados novamente no Brasil após a DSDP. Dividendos, aluguéis e juros têm regras específicas. O STJ já se pronunciou sobre a aplicação do tratado em casos de renda fixa brasileira por residentes fiscais na França — a decisão é favorável ao contribuinte.',
+      formatDetail:'Vídeo YouTube 12 min: o que é a Convenção → como ela se aplica por tipo de renda → o que precisar provar para usar o tratado → situações de conflito e como resolver. Newsletter para P04 com casos concretos. Watchtime alto + saves na descrição.',
+      fonte:'Brasil Tax', fonteUrl:'https://brasiltax.com/blog/acordo-bitribuacao-brasil-franca/',
+    },
+    {
+      id:'f9', urgency:'media', kpi:'Compartilhamentos', date:'mar 2026',
+      personas:['P01','P03','P04'], format:'Vídeo YouTube com Dados INSEE',
+      title:'Inflação voltou a 1,7% na França em março — o que os dados do INSEE dizem sobre o custo real de viver aqui',
+      desc:'A nota de conjuntura do INSEE de março de 2026 mostra que a inflação voltou a subir: +1,7% a/a em março, após +0,9% em fevereiro, puxada pela energia (+7,4%). O poder de compra das famílias deve cair ligeiramente no primeiro semestre. Para quem está planejando a mudança, esses dados são o piso de planejamento financeiro — não os números romantizados que circulam nas redes.',
+      formatDetail:'Vídeo YouTube 8 min: o que dizem os dados do INSEE → custo real de vida em Paris vs. outras cidades francesas → como calcular seu orçamento sem romantismo → o impacto da inflação de energia. Tom lúcido, pragmático. Discovery alto para P01 em fase de pesquisa.',
+      fonte:'INSEE', fonteUrl:'https://www.insee.fr/fr/statistiques/8974213',
+    },
+    {
+      id:'f10', urgency:'baixa', kpi:'Watchtime + Saves', date:'mar 2026',
+      personas:['P04'], format:'Newsletter + Vídeo Técnico',
+      title:'O relatório anual de reservas internacionais do Banco Central do Brasil — o que ele diz sobre o câmbio real-euro',
+      desc:'O Banco Central do Brasil publicou o Relatório de Gestão das Reservas Internacionais 2026, com dados sobre a política cambial, composição das reservas e perspectivas. Para brasileiras com ativos investidos no Brasil e despesas em euros, entender o cenário cambial do BCB é a base de qualquer estratégia de gestão do dinheiro entre os dois países. O relatório está disponível em PDF no portal do BCB.',
+      formatDetail:'Newsletter técnica para P04: síntese do relatório do BCB com implicações práticas para a gestão de patrimônio binacional. Vídeo YouTube de nível técnico para audiência que quer profundidade. Watchtime alto + saves entre P04 que acompanha câmbio ativamente.',
+      fonte:'Banco Central do Brasil', fonteUrl:'https://www.bcb.gov.br/content/publicacoes/relgestaoreservas/GESTAORESERVAS202603-relatorio_anual_reservas_internacionais_2026.pdf',
+    },
+];
+NEWS.trendmapping = [
+    {
+      id:'t1', urgency:'media', kpi:'Alcance + CTR', date:'mai–jun 2026',
+      personas:['P01','P02','P03','P04'], format:'Carrossel Snack + Reel',
+      title:'Reels de 7 a 15 segundos dominam o alcance no Instagram em 2026 — e o Por Dentro ainda não usa essa janela',
+      desc:'Estudos de 2026 mostram que Reels entre 7 e 15 segundos obtêm o maior taux de complétion e o melhor alcance orgânico no Instagram. Um Reel de 15 segundos com 80% de taxa de visualização completa é distribuído massivamente pelo algoritmo. Para o Por Dentro: pautas jurídicas densas podem ser condensadas em ganchos curtos que levam ao carrossel ou vídeo longo.',
+      formatDetail:'Teste: adaptar a próxima pauta de alta urgência (ex: aumento das taxas) em um Reel de 12 segundos com 3 dados chocantes + CTA para o carrossel completo. Medir taux de complétion. Se superar 70%, escalar o formato.',
+      fonte:'Pomelo Factory / Ruche & Pollen', fonteUrl:'https://www.pomelofactory.com/blog/formats-video-instagram-2026',
+    },
+    {
+      id:'t2', urgency:'media', kpi:'Alcance + Saves', date:'mai–jun 2026',
+      personas:['P01','P02'], format:'Reel Estratégia',
+      title:'O algoritmo do Instagram em 2026 gera 52% mais views para Reels — e 34% mais interações',
+      desc:'Dados de 2026 confirmam que Reels seguem sendo o formato mais impulsionado pelo algoritmo do Instagram, gerando 52% mais visualizações e 34% mais interações comparado a outros formatos. Para contas de nicho informativo como o Por Dentro, o Reel é o principal vetor de descoberta por audiência fria (P01), enquanto o carrossel converte em salvamentos a audiência já engajada.',
+      formatDetail:'Estratégia combinada: cada pauta importante ganha um Reel de descoberta (15–30s, gancho forte, CTA "salva o carrossel") + um carrossel de profundidade. Medir a proporção de novos seguidores que vêm pelo Reel vs. pelo carrossel.',
+      fonte:'Ruche & Pollen', fonteUrl:'https://ruche-pollen.com/blog-social-media/algorithme-reels-2026-guide-complet',
+    },
+    {
+      id:'t3', urgency:'alta', kpi:'CTR', date:'mai–jun 2026',
+      personas:['P01','P02','P03'], format:'Reel com Gancho Forte',
+      title:'As 3 primeiras segundas de um Reel determinam 80% da taxa de visualização completa — e o gancho é tudo',
+      desc:'Análise de performance de Reels em 2026 mostra que os primeiros 3 segundos determinam 80% do taux de complétion final. Para o Por Dentro, o gancho precisa criar tensão cognitiva imediata: "você sabia que…?", "o erro que…" ou uma afirmação contraintuitiva. Marcas que dominam Instagram em 2026 são as que têm um hook visual ou textual capaz de parar o scroll na primeira frame.',
+      formatDetail:'Protocolo de gancho para pautas jurídicas: formular sempre a primeira linha como tensão ("o aumento que vai custar X euros na sua renovação") antes de qualquer contexto. Testar 2 versões de gancho por Reel e medir qual alcança mais P01.',
+      fonte:'Takem Studio', fonteUrl:'https://www.takema-studio.com/marques/reels-instagram',
+    },
+    {
+      id:'t4', urgency:'media', kpi:'Alcance + Comentários', date:'mai–jun 2026',
+      personas:['P01','P02','P03'], format:'Reel Face Cam',
+      title:'O formato Face Cam está explodindo no Instagram em 2026 — e por que ele funciona especialmente para o Por Dentro',
+      desc:'Em 2026, o formato "face cam" (pessoa falando diretamente para a câmera) é o que mais cresce no Instagram. A autenticidade vence a produção IA. Para o Por Dentro, esse formato resolve dois problemas: custo de produção zero e conexão emocional com a audiência de P01 e P02, que buscam identificação com alguém que viveu o que elas estão vivendo.',
+      formatDetail:'Reel 30–40s em face cam: Ingryd explica uma mudança jurídica ou uma descoberta prática como se estivesse contando para uma amiga. Fundo neutro (parede Off-White), iluminação natural. Sem edição complexa. Testar 1 por semana durante junho e medir a diferença no engagement vs. carrossel.',
+      fonte:'Acces Référencement', fonteUrl:'https://www.acces-referencement.fr/instagram-en-2026-faut-il-encore-poster-en-feed-ou-tout-miser-sur-les-reels/',
+    },
+    {
+      id:'t5', urgency:'media', kpi:'Saves', date:'mai–jun 2026',
+      personas:['P02','P03','P04'], format:'Carrossel Estratégico',
+      title:'Carrossel tem 0,52% de engagement no Instagram vs. 0,35% de imagem simples — mas precisa de estrutura certa',
+      desc:'Dados de 2026: carrossel gera 0,52% de engajamento médio vs. 0,35% para imagem simples e 10% mais engajamento que outras publicações. O segredo não está na quantidade de slides, mas na estrutura: capa com tensão → slides que adicionam camadas progressivas (não repetem) → slide final com CTA e descoberta útil. O carrossel do Por Dentro é o motor de salvamentos — e precisa seguir essa lógica.',
+      formatDetail:'Auditoria: verificar os últimos 5 carrosséis publicados → verificar se têm context stacking ou repetição de informação → corrigir os próximos seguindo a estrutura tensão-progressão-descoberta-CTA.',
+      fonte:'Ruche & Pollen (Benchmark 2026)', fonteUrl:'https://ruche-pollen.com/blog-social-media/engagement-rate-instagram-calculer-ameliorer-2025',
+    },
+    {
+      id:'t6', urgency:'media', kpi:'Alcance', date:'mai 2026',
+      personas:['P01','P02'], format:'Reel Trending',
+      title:'A trend de maio de 2026 que funciona para nicho de informação: auto-derrisão nacional + som exclusivo + 22 segundos',
+      desc:'A trend "Composition" de maio 2026 viralizou com formato ultra-curto (20–30s), humor baseado em auto-derrisão nacional (contexto francês) e som capturado espontaneamente. O que funcionou: som exclusivo, texto minimalista que evoca sem sobre-explicar, duração dentro da janela de atenção natural. Para o Por Dentro: adaptar o formato com humor brasileiro sobre a burocracia francesa.',
+      formatDetail:'Ideia de adaptação: "quando você finalmente entende o sistema CAF depois de 18 meses…" — 22 segundos, face cam, som exclusivo, texto minimalista em português. Publicar nas primeiras 24h do trend para pegar o pico de distribuição.',
+      fonte:'Sport Brand Strategy', fonteUrl:'https://sportbrandstrategy.com/pages/blog/trends-instagram-mai-2026',
+    },
+    {
+      id:'t7', urgency:'baixa', kpi:'Watchtime', date:'2026',
+      personas:['P03','P04'], format:'Série de Reels / Vídeo Longo',
+      title:'Instagram está avançando sobre a TV conectada em 2026 — e isso abre um formato de série educativa',
+      desc:'Em 2026, o Instagram expandiu a duração máxima dos Reels para 20 minutos e está desenvolvendo estratégia de TV conectada. Para o Por Dentro, isso abre espaço para séries educativas mais longas — episódios de 5 a 10 minutos que aprofundam um tema (ex: "a série sobre o sistema de saúde francês em 4 episódios"). O YouTube continua sendo o centro do conteúdo longo, mas o Instagram começa a ser território de formato médio.',
+      formatDetail:'Experimento: publicar um episódio piloto de 5–7 minutos no Instagram Reels como extensão de um vídeo YouTube. Medir watch time vs. distribuição. Se os dados forem positivos, criar uma série mensal de 4 episódios sobre um tema estratégico (ex: "tudo sobre a CIAI em 4 partes").',
+      fonte:'VU Magazine', fonteUrl:'https://vu-magazine.com/blog/instagram-lorgne-sur-la-tv-connectee-strategie-2026',
+    },
+    {
+      id:'t8', urgency:'media', kpi:'CTR', date:'jan–jun 2026',
+      personas:['P01','P02','P03','P04'], format:'Produção Visual',
+      title:'9:16 é o único formato que importa no Instagram em 2026 — e o padrão de produção do Por Dentro',
+      desc:'Em 2026, o formato vertical 9:16 (1080×1920px) é o padrão absoluto para Reels e Stories. Posts de feed mantêm o 4:5 (1080×1350px) para carrosséis. Conteúdo horizontal perde engagement mecanicamente — o feed foi otimizado para o visual vertical. Para o Por Dentro, qualquer vídeo capturado na horizontal precisa ser recortado antes de publicar, sem exceção.',
+      formatDetail:'Checklist de publicação: verificar formato antes de publicar (9:16 para Reel/Story, 4:5 para feed). Verificar se textos em tela estão dentro da zona segura (evitar 15% superior e inferior da tela — fica sob o perfil e botões de ação).',
+      fonte:'2Emotion', fonteUrl:'https://www.2emotion.com/format-reel-instagram/',
+    },
+    {
+      id:'t9', urgency:'media', kpi:'Saves', date:'mai–jun 2026',
+      personas:['P01','P02'], format:'Snack Content',
+      title:'44% dos consumidores descobrem produtos via vídeo curto — e o snack content é o formato de maior ROI em 2026',
+      desc:'Dados de 2026 confirmam: 44% dos consumidores preferem descobrir conteúdo novo via vídeo curto. O snack content (vídeos de 5 a 30 segundos, designs de carrossel ultra-legíveis) entrega o ROI mais alto entre os formatos. Marcas que dominam usam uma intenção clara por peça e estrutura visual forte. Para o Por Dentro, a métrica-alvo é: cada peça de snack content tem uma ação específica que ela quer gerar (salvar / seguir / comentar).',
+      formatDetail:'Protocolo de intenção: antes de criar cada peça, definir: qual persona? qual ação? qual gancho? Snack content sem intenção definida desperdiça produção. Criar um post-it com as 3 perguntas visível durante a produção.',
+      fonte:'BuzzNative', fonteUrl:'https://buzznative.com/non-classe/creer-une-landing-page-efficace-guide-complet-pour-booster-vos-conversions-2/',
+    },
+    {
+      id:'t10', urgency:'media', kpi:'Compartilhamentos', date:'mai–jun 2026',
+      personas:['P01','P02'], format:'Reel Fórmula FATO-CONTEXTO-IMPACTO',
+      title:'A fórmula do @bfmtv (980K seguidores) que transforma textos de lei em Reels virais — e como adaptar',
+      desc:'O @bfmtv usa consistentemente a fórmula: FATO CHOCANTE (3s) → CONTEXTO MÍNIMO (15s) → IMPACTO NA VIDA REAL (10s) → CTA (2s). Taxa de compartilhamento 4,2× maior que posts de foto estática. Para o Por Dentro, essa estrutura funciona especialmente para pautas jurídicas e burocráticas — onde o fato real (aumento de 363% nas taxas de naturalização) já é chocante o suficiente para parar o scroll.',
+      formatDetail:'Template de roteiro: 1) abrir com o número ou a mudança chocante (3s) 2) dar o contexto mínimo necessário para entender "quem é afetado" (15s) 3) mostrar "o que isso muda na sua vida prática" (10s) 4) CTA claro para o carrossel ou link na bio (2s). Texto em tela, DM Sans, fundo Off-White.',
+      fonte:'BFM TV (@bfmtv) / Instagram', fonteUrl:'https://www.instagram.com/bfmtv/',
+    },
+];
+
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+let mesa = JSON.parse(localStorage.getItem('pd_mesa') || '[]');
+
+function getNote(id)       { return localStorage.getItem('pd_note_' + id) || ''; }
+function saveNote(id, val) { localStorage.setItem('pd_note_' + id, val); }
+
+/* ════════════════════════════════════════════════
+   RENDER TABS
+════════════════════════════════════════════════ */
+function buildTabs() {
+  const nav = document.getElementById('tabs');
+  const cats = Object.keys(CAT);
+  nav.innerHTML = cats.map((c, i) => `
+    <button class="tab ${i===0?'active':''}" data-c="${c}" onclick="showCat('${c}',this)">
+      ${CAT[c].icon} ${CAT[c].label}
+      <span class="tbadge">${CAT[c].count}</span>
+    </button>
+  `).join('') + `
+    <button class="tab" data-c="mesa" onclick="showCat('mesa',this)">
+      ✍️ Mesa
+      <span class="tbadge" id="tb-mesa">${mesa.length}</span>
+    </button>
+  `;
+}
+
+/* ════════════════════════════════════════════════
+   RENDER CAT SECTION
+════════════════════════════════════════════════ */
+function buildCatSection(cat) {
+  const m = CAT[cat];
+  const items = NEWS[cat] || [];
+
+  const src = m.sources.map(([n,u]) =>
+    `<span class="schip"><a href="${u}" target="_blank">↗ ${n}</a></span>`
+  ).join('');
+
+  const cards = items.map(item => buildCard(item, m)).join('');
+
+  return `
+    <div class="section" id="sec-${cat}">
+      <div class="cat-hdr">
+        <h2>${m.icon} ${m.label}</h2>
+        <p class="cdesc">${m.desc}</p>
+        <div class="sources-row">
+          <span class="sources-label">Fontes:</span>${src}
+        </div>
+      </div>
+      <div class="news-stack">${cards}</div>
+    </div>
+  `;
+}
+
+function buildCard(item, m) {
+  const uLabel = {alta:'URGENTE',media:'RELEVANTE',baixa:'MONITOR'};
+  const uCls   = {alta:'u-alta',media:'u-media',baixa:'u-baixa'};
+  const ps = item.personas.map(p=>`<span class="tag-p">${p}</span>`).join('');
+  const added = mesa.includes(item.id);
+
+  return `
+    <details class="nc" style="--cc:${m.color}" id="nc-${item.id}">
+      <summary class="ncs">
+        <div class="ncs-left">
+          <h3>${item.title}</h3>
+          <div class="ntags">
+            <span class="tag-fmt" style="background:${m.color}">${item.format}</span>
+            ${ps}
+            <span class="tag-u ${uCls[item.urgency]}">${uLabel[item.urgency]}</span>
+            <span class="tag-kpi">KPI: ${item.kpi}</span>
+          </div>
+        </div>
+        <span class="nc-chevron">▾</span>
+      </summary>
+      <div class="ncb">
+        <p class="ncb-desc">${item.desc}</p>
+        <div class="ncb-fmt">
+          <div class="ncb-fmt-label">💡 Formato &amp; Distribuição</div>
+          <p>${item.formatDetail}</p>
+        </div>
+        <div class="ncb-foot">
+          <a href="${item.fonteUrl}" target="_blank" class="nc-fonte">↗ ${item.fonte}</a>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div class="fmt-select-wrap">
+              <span class="fmt-select-label">Formato</span>
+              <select class="fmt-select" id="fmtsel-${item.id}"
+                      onchange="saveFmt('${item.id}',this.value)"
+                      onclick="event.stopPropagation()">
+                <option value="">— escolher —</option>
+                ${['Carrossel','Vídeo YouTube','Reel','Stories','Newsletter'].map(f=>`<option value="${f}" ${getFmt(item.id)===f?'selected':''}>${f}</option>`).join('')}
+              </select>
+            </div>
+            <button class="btn-mesa ${added?'added':''}"
+                    id="bm-${item.id}"
+                    onclick="${added?'void(0)':'addMesa(\''+item.id+'\')'}">
+              ${added?'✓ Adicionado':'+ Adicionar à Mesa'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+/* ════════════════════════════════════════════════
+   RENDER MESA
+════════════════════════════════════════════════ */
+function buildMesa() {
+  if (mesa.length === 0) {
+    return `
+      <div class="section" id="sec-mesa">
+        <div class="mesa-hdr">
+          <div>
+            <h2>✍️ Mesa de Roteirização</h2>
+            <div class="mesa-hdr-sub">Adicione pautas das categorias para roteirizar aqui.</div>
+          </div>
+        </div>
+        <div class="mesa-empty">
+          <div class="mesa-empty-icon">✍️</div>
+          <p>A mesa está vazia.<br>Abra qualquer card e clique em <strong>+ Adicionar à Mesa</strong>.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const cards = mesa.map(id => {
+    const { item, m } = findItem(id);
+    if (!item) return '';
+    const note = getNote(id);
+    const formatoSalvo = getFmt(id) || item.format;
+    return `
+      <div class="mcard" id="mc-${id}">
+        <div class="mcard-hdr">
+          <div class="mcard-hdr-left">
+            <h4>${item.title}</h4>
+            <div class="mcard-cat" style="color:${m.color}">${m.icon} ${m.label} &nbsp;·&nbsp;
+              <select class="fmt-select" id="fmtsel-mesa-${id}" style="display:inline-block;min-width:140px;font-size:11px;padding:3px 7px;"
+                      onchange="saveFmt('${id}',this.value);syncFmtSelect('${id}',this.value)">
+                ${['Carrossel','Vídeo YouTube','Reel','Stories','Newsletter'].map(f=>`<option value="${f}" ${formatoSalvo===f?'selected':''}>${f}</option>`).join('')}
+              </select>
+              &nbsp;·&nbsp; KPI: ${item.kpi}
+            </div>
+          </div>
+          <div class="mcard-hdr-actions">
+            <button class="btn-prompt-claude" onclick="gerarPromptClaude('${id}')" title="Gerar e copiar prompt de roteirização personalizado">✨ Prompt à Claude</button>
+            <button class="btn-remove" onclick="removeMesa('${id}')" title="Remover da mesa">✕</button>
+          </div>
+        </div>
+        <div class="mcard-body">
+          <label>Roteiro / Notas / Texto do Post</label>
+          <textarea class="mesa-ta" id="ta-${id}"
+            placeholder="Escreva aqui o roteiro, legenda, estrutura do carrossel, ou qualquer nota sobre esta pauta…"
+            oninput="autoResize(this);debounceSave('${id}',this.value)"
+          >${note}</textarea>
+          <div class="save-dot" id="sd-${id}">✓ Salvo automaticamente</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="section" id="sec-mesa">
+      <div class="mesa-hdr">
+        <div>
+          <h2>✍️ Mesa de Roteirização</h2>
+          <div class="mesa-hdr-sub">${mesa.length} pauta${mesa.length>1?'s':''} na mesa · Salvo automaticamente</div>
+        </div>
+        <div class="mesa-acts">
+          <button class="btn-export" onclick="exportDocx()">⬇ Exportar .docx</button>
+          <button class="btn-clear" onclick="clearMesa()">Limpar mesa</button>
+        </div>
+      </div>
+      <div class="mesa-list">${cards}</div>
+    </div>
+  `;
+}
+
+/* ════════════════════════════════════════════════
+   INIT + NAVIGATION
+════════════════════════════════════════════════ */
+function init() {
+  buildTabs();
+  const main = document.getElementById('main');
+  let html = Object.keys(CAT).map(c => buildCatSection(c)).join('');
+  html += buildMesa();
+  main.innerHTML = html;
+
+  // activate first
+  const first = document.querySelector('.section');
+  if (first) first.classList.add('active');
+
+  // init textareas
+  document.querySelectorAll('.mesa-ta').forEach(autoResize);
+}
+
+function showCat(cat, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  if (cat === 'mesa') {
+    // re-render mesa (picks up latest state)
+    const main = document.getElementById('main');
+    const existing = document.getElementById('sec-mesa');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.innerHTML = buildMesa();
+    main.appendChild(div.firstElementChild);
+    document.getElementById('sec-mesa').classList.add('active');
+    document.querySelectorAll('.mesa-ta').forEach(autoResize);
+  } else {
+    const sec = document.getElementById('sec-' + cat);
+    if (sec) sec.classList.add('active');
+  }
+}
+
+/* ════════════════════════════════════════════════
+   MESA LOGIC
+════════════════════════════════════════════════ */
+function findItem(id) {
+  for (const cat of Object.keys(NEWS)) {
+    const item = NEWS[cat].find(i => i.id === id);
+    if (item) return { item, m: CAT[cat] };
+  }
+  return { item: null, m: null };
+}
+
+function addMesa(id) {
+  if (mesa.includes(id)) return;
+  mesa.push(id);
+  localStorage.setItem('pd_mesa', JSON.stringify(mesa));
+
+  // Update button in place
+  const btn = document.getElementById('bm-' + id);
+  if (btn) {
+    btn.textContent = '✓ Adicionado';
+    btn.classList.add('added');
+    btn.onclick = null;
+  }
+
+  // Update badge
+  const tb = document.getElementById('tb-mesa');
+  if (tb) tb.textContent = mesa.length;
+}
+
+function removeMesa(id) {
+  mesa = mesa.filter(i => i !== id);
+  localStorage.setItem('pd_mesa', JSON.stringify(mesa));
+
+  const card = document.getElementById('mc-' + id);
+  if (card) card.remove();
+
+  const tb = document.getElementById('tb-mesa');
+  if (tb) tb.textContent = mesa.length;
+
+  const sub = document.querySelector('#sec-mesa .mesa-hdr-sub');
+  if (sub) sub.textContent = mesa.length + ' pauta' + (mesa.length !== 1 ? 's' : '') + ' na mesa · Salvo automaticamente';
+
+  if (mesa.length === 0) {
+    const sec = document.getElementById('sec-mesa');
+    if (sec) {
+      sec.innerHTML = `
+        <div class="mesa-hdr"><div>
+          <h2>✍️ Mesa de Roteirização</h2>
+          <div class="mesa-hdr-sub">Adicione pautas das categorias para roteirizar aqui.</div>
+        </div></div>
+        <div class="mesa-empty">
+          <div class="mesa-empty-icon">✍️</div>
+          <p>A mesa está vazia.<br>Abra qualquer card e clique em <strong>+ Adicionar à Mesa</strong>.</p>
+        </div>`;
+    }
+  }
+}
+
+function clearMesa() {
+  if (!confirm('Limpar toda a mesa? As notas salvas serão apagadas.')) return;
+  mesa.forEach(id => localStorage.removeItem('pd_note_' + id));
+  mesa = [];
+  localStorage.setItem('pd_mesa', JSON.stringify([]));
+  const tb = document.getElementById('tb-mesa');
+  if (tb) tb.textContent = 0;
+  const sec = document.getElementById('sec-mesa');
+  if (sec) {
+    sec.innerHTML = `
+      <div class="mesa-hdr"><div>
+        <h2>✍️ Mesa de Roteirização</h2>
+        <div class="mesa-hdr-sub">Adicione pautas das categorias para roteirizar aqui.</div>
+      </div></div>
+      <div class="mesa-empty">
+        <div class="mesa-empty-icon">✍️</div>
+        <p>A mesa está vazia.<br>Abra qualquer card e clique em <strong>+ Adicionar à Mesa</strong>.</p>
+      </div>`;
+  }
+}
+
+/* ════════════════════════════════════════════════
+   FORMATO — LocalStorage helpers
+════════════════════════════════════════════════ */
+function getFmt(id) { return localStorage.getItem('pd_fmt_' + id) || ''; }
+function saveFmt(id, val) { localStorage.setItem('pd_fmt_' + id, val); }
+function syncFmtSelect(id, val) {
+  const sel = document.getElementById('fmtsel-' + id);
+  if (sel) sel.value = val;
+}
+
+/* ════════════════════════════════════════════════
+   PROMPT À CLAUDE — gerador de roteirização
+════════════════════════════════════════════════ */
+function gerarPromptClaude(id) {
+  const { item, m } = findItem(id);
+  if (!item) return;
+  const formatoEscolhido = getFmt(id) || item.format || 'Carrossel';
+  const personas = Array.isArray(item.personas) ? item.personas.join(' e ') : item.personas;
+
+  let instrucaoFormato = '';
+  if (formatoEscolhido.includes('Carrossel')) {
+    instrucaoFormato = `Estrutura do carrossel:
+- SLIDE 1 (Capa/Gancho): Tensão cognitiva imediata — afirmação ou pergunta que para o scroll. Fonte grande, fundo Off-White.
+- SLIDES 2–5 (Progressão de Contexto): Cada slide adiciona UMA camada nova — nunca repete. Máximo 3 linhas por slide.
+- SLIDE FINAL (Descoberta + CTA): Informação mais acionável + CTA de salvamento direcionado à persona.`;
+  } else if (formatoEscolhido.includes('Newsletter')) {
+    instrucaoFormato = `Tom e estrutura da newsletter:
+- Escreva como carta íntima de bastidor — como se contasse para uma amiga próxima.
+- Abertura: situação concreta que a leitora reconhece na própria vida.
+- Corpo: desenvolvimento técnico mas nunca frio — use "você", "a gente", e o francês como tempero (voilà, bon, en résumé).
+- Encerramento: uma ação clara que a leitora pode fazer ainda hoje.`;
+  } else if (formatoEscolhido.includes('Reel') || formatoEscolhido.includes('Stories')) {
+    instrucaoFormato = `Roteiro de vídeo curto (Reel/Stories):
+- 0–3s (Gancho): Dado chocante ou afirmação contraintuitiva. Sem intro. Direto no fato.
+- 4–18s (Contexto mínimo): Quem é afetado, por quê importa agora.
+- 19–28s (Impacto real): O que muda concretamente na vida de quem assiste.
+- 29–32s (CTA): Uma ação clara — "salva", "manda pra quem precisa", "comenta se isso te afeta".`;
+  } else if (formatoEscolhido.includes('Vídeo YouTube')) {
+    instrucaoFormato = `Roteiro YouTube:
+- Abertura (0–45s): Gancho que justifica o vídeo — dado real, pergunta não-óbvia. Sem apresentação de canal.
+- Desenvolvimento: Blocos com timestamps. Cada bloco responde UMA pergunta. Exemplos numéricos concretos.
+- Encerramento: Síntese acionável em 3 pontos + CTA.`;
+  }
+
+  const descLimpa = item.desc ? item.desc.replace(/<[^>]+>/g, '') : '';
+  const detalhe = item.formatDetail || '';
+
+  const prompt = `# PROMPT DE ROTEIRIZAÇÃO — Por Dentro
+
+## Pauta: ${item.title}
+**Categoria:** ${m.label} | **Formato escolhido:** ${formatoEscolhido} | **KPI alvo:** ${item.kpi}
+**Personas-alvo:** ${personas} | **Urgência:** ${item.urgency ? item.urgency.toUpperCase() : 'MÉDIA'}
+
+---
+
+## VOZ E TOM (obrigatório — não negociável)
+Escreva como uma **conversa inteligente entre amigas** — direta, calorosa, lúcida, sem postura professoral.
+
+Princípios absolutistas:
+- **Sem romantizar** ("a França é linda", "é um sonho") e **sem assustar** ("é difícil demais", "você não vai conseguir")
+- Frases curtas. Uma ideia por frase. Parágrafos de no máximo 3 linhas.
+- O francês aparece como tempero natural, nunca como ostentação: *titre de séjour*, *bon*, *voilà*, *en résumé*
+- Uso do "você" direto. Nunca "os imigrantes", nunca "as pessoas que..."
+- Nenhum julgamento sobre escolhas pessoais. Nenhum alarmismo.
+
+---
+
+## CONTEXTO DA PAUTA
+${descLimpa}
+
+**Detalhe editorial original:**
+${detalhe}
+
+**Fonte:** ${item.fonte} — ${item.fonteUrl}
+
+---
+
+## ENTREGÁVEL ESPERADO
+${instrucaoFormato}
+
+---
+
+## RESTRIÇÕES FINAIS
+- Não use bullet points com traço — prefira ícones (→, ·) ou texto corrido
+- Não comece com "Olá" ou "Oi gente"
+- Não termine com "espero ter ajudado" ou fórmulas de fechamento padrão
+- O conteúdo deve gerar IDENTIFICAÇÃO IMEDIATA + uma AÇÃO CLARA + uma DESCOBERTA ÚTIL
+
+*Por Dentro · Canal YouTube e Instagram para brasileiras imigrantes na França*`;
+
+  navigator.clipboard.writeText(prompt).then(() => {
+    const btn = document.querySelector(`#mc-${id} .btn-prompt-claude`);
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = '✓ Copiado!';
+      btn.style.background = '#063B35';
+      btn.style.color = '#FAF8F4';
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 2500);
+    }
+  }).catch(() => {
+    alert('Não foi possível acessar o clipboard. Verifique as permissões do navegador.');
+  });
+}
+
+/* ════════════════════════════════════════════════
+   TEXTAREA AUTO-RESIZE + AUTOSAVE
+════════════════════════════════════════════════ */
+function autoResize(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+const _timers = {};
+function debounceSave(id, val) {
+  clearTimeout(_timers[id]);
+  _timers[id] = setTimeout(() => {
+    saveNote(id, val);
+    const dot = document.getElementById('sd-' + id);
+    if (dot) { dot.classList.add('show'); setTimeout(()=>dot.classList.remove('show'), 2200); }
+  }, 600);
+}
+
+/* ════════════════════════════════════════════════
+   DOCX EXPORT
+════════════════════════════════════════════════ */
+function exportDocx() {
+  if (mesa.length === 0) { alert('A mesa está vazia.'); return; }
+
+  // Try docx UMD library first
+  if (window.docx && window.docx.Document) {
+    exportWithLib();
+  } else {
+    exportWordBlob();
+  }
+}
+
+async function exportWithLib() {
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle, AlignmentType } = window.docx;
+
+  const paras = [
+    new Paragraph({
+      children: [new TextRun({ text: 'Mesa de Roteirização — Por Dentro', bold: true, size: 40 })],
+      alignment: AlignmentType.CENTER,
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: 'Digest Editorial · 26 mai – 8 jun 2026', italics: true, color: '7A6B60', size: 22 })],
+      alignment: AlignmentType.CENTER,
+    }),
+    new Paragraph({ text: '' }),
+    new Paragraph({ text: '' }),
+  ];
+
+  mesa.forEach((id, idx) => {
+    const { item, m } = findItem(id);
+    if (!item) return;
+    const note = getNote(id);
+
+    paras.push(
+      new Paragraph({ children: [new TextRun({ text: `${idx+1}. ${item.title}`, bold: true, size: 28 })] }),
+      new Paragraph({ children: [new TextRun({ text: `${m.icon} ${m.label}  ·  ${item.format}  ·  KPI: ${item.kpi}`, color: '7A6B60', size: 18 })] }),
+      new Paragraph({ text: '' }),
+      new Paragraph({ children: [new TextRun({ text: 'Contexto editorial:', bold: true })] }),
+      new Paragraph({ text: item.desc.replace(/<[^>]+>/g,'') }),
+      new Paragraph({ text: '' }),
+      new Paragraph({ children: [new TextRun({ text: 'Orientação de formato:', bold: true })] }),
+      new Paragraph({ text: item.formatDetail }),
+      new Paragraph({ text: '' }),
+      new Paragraph({ children: [new TextRun({ text: 'Roteiro / Notas:', bold: true })] }),
+      new Paragraph({ text: note || '(sem notas registradas)' }),
+      new Paragraph({ text: '' }),
+      new Paragraph({ children: [new TextRun({ text: '──────────────────────────────────────────', color: 'CCCCCC' })] }),
+      new Paragraph({ text: '' }),
+    );
+  });
+
+  const doc = new Document({ sections: [{ children: paras }] });
+  try {
+    const blob = await Packer.toBlob(doc);
+    dlBlob(blob, 'roteirizacao-por-dentro.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  } catch(e) {
+    console.warn('docx lib error:', e);
+    exportWordBlob();
+  }
+}
+
+function exportWordBlob() {
+  let body = `
+    <h1 style="font-family:Georgia;font-size:20pt;color:#2A1F18;text-align:center">Mesa de Roteirização — Por Dentro</h1>
+    <p style="font-family:Arial;font-size:10pt;color:#7A6B60;text-align:center;font-style:italic">Digest Editorial · 26 mai – 8 jun 2026</p>
+    <br><br>
+  `;
+  mesa.forEach((id, idx) => {
+    const { item, m } = findItem(id);
+    if (!item) return;
+    const note = getNote(id);
+    const desc = item.desc.replace(/<[^>]+>/g,'');
+    body += `
+      <h2 style="font-family:Georgia;font-size:14pt;color:#2A1F18;margin-top:20pt">${idx+1}. ${item.title}</h2>
+      <p style="font-family:Arial;font-size:9pt;color:#7A6B60">
+        ${m.icon} ${m.label} &nbsp;·&nbsp; ${item.format} &nbsp;·&nbsp; KPI: ${item.kpi}
+      </p>
+      <p style="font-family:Arial;font-size:10pt"><b>Contexto editorial:</b></p>
+      <p style="font-family:Arial;font-size:10pt">${desc}</p>
+      <p style="font-family:Arial;font-size:10pt"><b>Orientação de formato:</b></p>
+      <p style="font-family:Arial;font-size:10pt">${item.formatDetail}</p>
+      <p style="font-family:Arial;font-size:10pt"><b>Roteiro / Notas:</b></p>
+      <p style="font-family:Arial;font-size:10pt;white-space:pre-wrap">${note || '(sem notas registradas)'}</p>
+      <hr style="border:none;border-top:1px solid #ccc;margin:16pt 0">
+    `;
+  });
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8"><title>Mesa de Roteirização — Por Dentro</title>
+    <style>body{font-family:Arial;}</style></head>
+    <body>${body}</body></html>`;
+
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  dlBlob(blob, 'roteirizacao-por-dentro.doc', 'application/msword');
+}
+
+function dlBlob(blob, name, type) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 600);
+}
+
+/* ════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════ */
+init();
+</script>
+</body>
+</html>
