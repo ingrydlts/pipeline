@@ -2,44 +2,26 @@ name: Por Dentro — Content Pipeline
 
 on:
   schedule:
-    # Roda toda segunda-feira às 08h (horário de Paris, UTC+2)
-    - cron: '0 6 * * 1'
-  workflow_dispatch:  # permite rodar manualmente pelo GitHub UI
-
-permissions:
-  contents: write  # necessário para fazer push ao branch gh-pages
+    - cron: '0 6 * * 1'  # toda segunda, 8h Paris
+  workflow_dispatch:
 
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout do repositório
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
 
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Instalar dependências
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-      - name: Rodar o pipeline
+      - name: Rodar pipeline
         env:
-          NOTION_TOKEN:        ${{ secrets.NOTION_TOKEN }}
-          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
-          NOTION_DATABASE_ID:  ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_TOKEN:              ${{ secrets.NOTION_TOKEN }}
+          ANTHROPIC_API_KEY:         ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_DATABASE_ID:        ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_DATABASE_SAIDA_ID:  ${{ secrets.NOTION_DATABASE_SAIDA_ID }}
         run: python scripts/pipeline.py
-
-      - name: Commit e push do HTML atualizado
-        run: |
-          git config user.name  "por-dentro-bot"
-          git config user.email "bot@por-dentro.com"
-          git add index.html
-          # Só commita se houve mudança real
-          git diff --staged --quiet || git commit -m "feat: pautas auto-injetadas $(date +'%Y-%m-%d')"
-          git push
