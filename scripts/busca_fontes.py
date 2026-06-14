@@ -23,18 +23,7 @@ DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 # e keywords de filtro (lista vazia = aceita tudo da fonte)
 
 FONTES_RSS = [
-    {
-        "nome": "Légifrance — Textes récents",
-        "url": "https://www.legifrance.gouv.fr/rss/jorf-textes-recents.xml",
-        "categoria": "juridica",
-        "personas": ["P03", "P04"],
-        "urgencia": "alta",
-        "keywords": [
-            "étranger", "étrangers", "naturalisation", "séjour",
-            "immigration", "visa", "ressortissant", "titre de séjour",
-            "CESEDA", "asile", "réfugié", "travailleur"
-        ],
-    },
+    # ── Fontes com RSS próprio validado ──────────────────────────────────────
     {
         "nome": "La Cimade",
         "url": "https://www.lacimade.org/feed/",
@@ -47,64 +36,15 @@ FONTES_RSS = [
         ],
     },
     {
-        "nome": "Le Monde — Immigration",
-        "url": "https://www.lemonde.fr/immigration/rss.xml",
-        "categoria": "juridica",
-        "personas": ["P01", "P03"],
-        "urgencia": "media",
-        "keywords": [],  # feed já é filtrado por tema — aceita tudo
-    },
-    {
         "nome": "GISTI",
         "url": "https://www.gisti.org/spip.php?page=backend",
         "categoria": "juridica",
         "personas": ["P03", "P04"],
         "urgencia": "alta",
-        "keywords": [],  # feed já é filtrado por tema
+        "keywords": [],  # feed já é filtrado — aceita tudo
     },
     {
-        "nome": "Service-Public — Étrangers",
-        "url": "https://www.service-public.fr/rss/particuliers/N19804.xml",
-        "categoria": "burocratica",
-        "personas": ["P01", "P02"],
-        "urgencia": "alta",
-        "keywords": [],
-    },
-    {
-        "nome": "CAF — Actualités",
-        "url": "https://www.caf.fr/rss.xml",
-        "categoria": "burocratica",
-        "personas": ["P02", "P03"],
-        "urgencia": "media",
-        "keywords": [
-            "APL", "aide", "allocation", "logement", "étranger",
-            "ressortissant", "droits", "prestation", "revenu"
-        ],
-    },
-    {
-        "nome": "France Travail — Actualités",
-        "url": "https://www.francetravail.fr/actualites/rss.xml",
-        "categoria": "academica",
-        "personas": ["P02", "P03"],
-        "urgencia": "media",
-        "keywords": [
-            "étranger", "travailleur", "emploi", "formation",
-            "alternance", "diplôme", "contrat", "recrutement"
-        ],
-    },
-    {
-        "nome": "Campus France — Actualités",
-        "url": "https://www.campusfrance.org/fr/rss.xml",
-        "categoria": "academica",
-        "personas": ["P01", "P02"],
-        "urgencia": "media",
-        "keywords": [
-            "brésil", "brasileiro", "bourse", "visa étudiant",
-            "inscription", "master", "licence", "doctorat"
-        ],
-    },
-    {
-        "nome": "Café de la Bourse — Actualités",
+        "nome": "Café de la Bourse",
         "url": "https://www.cafedelabourse.com/feed",
         "categoria": "financas",
         "personas": ["P03", "P04"],
@@ -112,6 +52,86 @@ FONTES_RSS = [
         "keywords": [
             "PEA", "assurance vie", "impôt", "déclaration",
             "investissement", "épargne", "fiscalité", "patrimoine"
+        ],
+    },
+
+    # ── Google News RSS (fallback para fontes sem RSS próprio) ───────────────
+    # Google News RSS é público, gratuito e não requer autenticação
+    {
+        "nome": "Google News — Légifrance Étrangers",
+        "url": "https://news.google.com/rss/search?q=legifrance+%C3%A9trangers+s%C3%A9jour+naturalisation&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "juridica",
+        "personas": ["P03", "P04"],
+        "urgencia": "alta",
+        "keywords": [
+            "étranger", "naturalisation", "séjour", "immigration",
+            "titre de séjour", "CESEDA", "asile", "ressortissant"
+        ],
+    },
+    {
+        "nome": "Google News — Immigration France",
+        "url": "https://news.google.com/rss/search?q=immigration+France+loi+%C3%A9tranger+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "juridica",
+        "personas": ["P01", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "immigration", "étranger", "titre", "naturalisation",
+            "préfecture", "visa", "séjour", "loi"
+        ],
+    },
+    {
+        "nome": "Google News — CAF APL Étrangers",
+        "url": "https://news.google.com/rss/search?q=CAF+APL+allocation+%C3%A9trangers+France&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "burocratica",
+        "personas": ["P02", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "APL", "aide", "allocation", "logement", "CAF",
+            "prestation", "revenu", "ressortissant"
+        ],
+    },
+    {
+        "nome": "Google News — Service-Public Étrangers",
+        "url": "https://news.google.com/rss/search?q=service-public.fr+%C3%A9trangers+d%C3%A9marche&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "burocratica",
+        "personas": ["P01", "P02"],
+        "urgencia": "alta",
+        "keywords": [
+            "étranger", "démarche", "titre", "préfecture",
+            "renouvellement", "carte de séjour", "ANEF"
+        ],
+    },
+    {
+        "nome": "Google News — France Travail Emploi Étrangers",
+        "url": "https://news.google.com/rss/search?q=France+Travail+emploi+%C3%A9trangers+alternance&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "academica",
+        "personas": ["P02", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "emploi", "formation", "alternance", "diplôme",
+            "contrat", "recrutement", "travailleur étranger"
+        ],
+    },
+    {
+        "nome": "Google News — Campus France Brésil",
+        "url": "https://news.google.com/rss/search?q=Campus+France+visa+%C3%A9tudiant+br%C3%A9sil+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "academica",
+        "personas": ["P01", "P02"],
+        "urgencia": "media",
+        "keywords": [
+            "brésil", "visa étudiant", "bourse", "inscription",
+            "master", "doctorat", "Campus France"
+        ],
+    },
+    {
+        "nome": "Google News — Fiscalité Expatriés France",
+        "url": "https://news.google.com/rss/search?q=fiscalit%C3%A9+expatri%C3%A9s+France+imp%C3%B4t+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "financas",
+        "personas": ["P03", "P04"],
+        "urgencia": "media",
+        "keywords": [
+            "impôt", "déclaration", "expatrié", "non-résident",
+            "fiscalité", "convention", "Brésil", "patrimoine"
         ],
     },
 ]
@@ -181,7 +201,7 @@ def criar_rascunho_notion(titulo: str, url: str, descricao: str,
                     "title": [{"text": {"content": titulo_limpo}}]
                 },
                 "Categoria": {
-                    "select": {"name": fonte["categoria"]}
+                    "multi_select": [{"name": fonte["categoria"]}]
                 },
                 "Persona": {
                     "multi_select": [{"name": p} for p in fonte["personas"]]
