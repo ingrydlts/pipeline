@@ -325,6 +325,9 @@ FONTES_RSS = [
 # ─── Janela de tempo: só aceita artigos das últimas 8 dias ───────────────────
 JANELA_DIAS = 8
 
+# ─── Mínimo de rascunhos por categoria por rodada ────────────────────────────
+MINIMO_POR_CATEGORIA = 5
+
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -458,13 +461,18 @@ def criar_rascunho_notion(titulo: str, url: str, descricao: str,
 
 # ─── Processador de RSS ───────────────────────────────────────────────────────
 
-def processar_fonte_rss(fonte: dict) -> int:
-    """Lê um feed RSS, filtra e cria rascunhos no Notion. Retorna qtd criada."""
-    print(f"\n📡 {fonte['nome']}")
+def processar_fonte_rss(fonte: dict, criados_por_categoria: dict,
+                         relaxar_keywords: bool = False) -> int:
+    """Lê um feed RSS, filtra e cria rascunhos no Notion. Retorna qtd criada.
+
+    relaxar_keywords=True ignora o filtro de keywords (usado na 2ª passagem
+    para garantir o mínimo por categoria).
+    """
+    print(f"\n📡 {fonte['nome']}" + (" [keywords relaxadas]" if relaxar_keywords else ""))
     criados = 0
+    cat = fonte["categoria"]
 
     try:
-        # feedparser aceita URL direto — faz o fetch internamente
         feed = feedparser.parse(fonte["url"])
 
         if feed.bozo and not feed.entries:
@@ -473,27 +481,28 @@ def processar_fonte_rss(fonte: dict) -> int:
 
         print(f"  → {len(feed.entries)} artigo(s) encontrado(s) no feed")
 
-        for entry in feed.entries:
-            titulo     = entry.get("title", "")
-            url        = entry.get("link", "")
-            descricao  = entry.get("summary", "") or entry.get("description", "")
+        keywords = [] if relaxar_keywords else fonte["keywords"]
 
-            # Filtros
+        for entry in feed.entries:
+            titulo    = entry.get("title", "")
+            url       = entry.get("link", "")
+            descricao = entry.get("summary", "") or entry.get("description", "")
+
             if not url:
                 continue
             if not dentro_da_janela(entry):
                 continue
-            if not contem_keyword(titulo, descricao, fonte["keywords"]):
+            if not contem_keyword(titulo, descricao, keywords):
                 continue
             if url_ja_existe_no_notion(url):
                 print(f"  ↩ Já existe: {titulo[:60]}...")
                 continue
 
-            # Criar no Notion
             ok = criar_rascunho_notion(titulo, url, descricao, fonte["nome"], fonte)
             if ok:
                 criados += 1
-                print(f"  ✓ Rascunho criado: {titulo[:70]}")
+                criados_por_categoria[cat] = criados_por_categoria.get(cat, 0) + 1
+                print(f"  ✓ [{cat}: {criados_por_categoria[cat]}] {titulo[:65]}")
 
     except Exception as e:
         print(f"  ✗ Erro ao processar feed: {e}")
@@ -509,13 +518,43 @@ def main():
     print(f"   Janela: últimos {JANELA_DIAS} dias\n")
 
     total_criados = 0
+    criados_por_categoria = {}
 
+    # ── 1ª passagem: filtros normais ─────────────────────────────────────────
+    print("── Passagem 1: filtros normais ──")
     for fonte in FONTES_RSS:
-        qtd = processar_fonte_rss(fonte)
+        qtd = processar_fonte_rss(fonte, criados_por_categoria)
         total_criados += qtd
+
+    # ── 2ª passagem: reforça categorias abaixo do mínimo ────────────────────
+    todas_categorias = set(f["categoria"] for f in FONTES_RSS)
+    abaixo_do_minimo = [
+        cat for cat in todas_categorias
+        if criados_por_categoria.get(cat, 0) < MINIMO_POR_CATEGORIA
+    ]
+
+    if abaixo_do_minimo:
+        print(f"\n── Passagem 2: categorias abaixo de {MINIMO_POR_CATEGORIA} → {abaixo_do_minimo} ──")
+        # Agrupa fontes por categoria para a 2ª passagem
+        fontes_por_cat = {}
+        for f in FONTES_RSS:
+            fontes_por_cat.setdefault(f["categoria"], []).append(f)
+
+        for cat in abaixo_do_minimo:
+            faltam = MINIMO_POR_CATEGORIA - criados_por_categoria.get(cat, 0)
+            print(f"\n  🔄 '{cat}' tem {criados_por_categoria.get(cat,0)} — buscando mais {faltam}...")
+            for fonte in fontes_por_cat.get(cat, []):
+                if criados_por_categoria.get(cat, 0) >= MINIMO_POR_CATEGORIA:
+                    break
+                qtd = processar_fonte_rss(fonte, criados_por_categoria, relaxar_keywords=True)
+                total_criados += qtd
 
     print(f"\n{'═'*50}")
     print(f"✅ Camada 1 concluída: {total_criados} rascunho(s) criado(s) no Notion")
+    for cat in sorted(todas_categorias):
+        n = criados_por_categoria.get(cat, 0)
+        status = "✓" if n >= MINIMO_POR_CATEGORIA else "⚠ abaixo do mínimo"
+        print(f"   {status} {cat}: {n}")
     print(f"   Próximo passo: Camada 2 roda na segunda-feira e estrutura tudo com Claude")
     print(f"{'═'*50}\n")
 
