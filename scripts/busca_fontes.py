@@ -24,8 +24,8 @@ DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 
 FONTES_RSS = [
     {
-        "nome": "Légifrance — JORF",
-        "url": "https://www.legifrance.gouv.fr/rss/jorf.xml",
+        "nome": "Légifrance — Textes récents",
+        "url": "https://www.legifrance.gouv.fr/rss/jorf-textes-recents.xml",
         "categoria": "juridica",
         "personas": ["P03", "P04"],
         "urgencia": "alta",
@@ -48,7 +48,7 @@ FONTES_RSS = [
     },
     {
         "nome": "Le Monde — Immigration",
-        "url": "https://www.lemonde.fr/immigration/rss_full.xml",
+        "url": "https://www.lemonde.fr/immigration/rss.xml",
         "categoria": "juridica",
         "personas": ["P01", "P03"],
         "urgencia": "media",
