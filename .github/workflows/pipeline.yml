@@ -1,27 +1,32 @@
-name: Por Dentro — Content Pipeline
+name: Por Dentro — Camada 2 (Estruturação com Claude)
 
 on:
   schedule:
-    - cron: '0 6 * * 1'  # toda segunda, 8h Paris
-  workflow_dispatch:
+    # Toda segunda-feira às 06h00 UTC (08h Paris no verão)
+    - cron: '0 6 * * 1'
+  workflow_dispatch:  # permite rodar manualmente
 
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
-      - run: pip install -r requirements.txt
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
 
       - name: Rodar pipeline
         env:
-          NOTION_TOKEN:              ${{ secrets.NOTION_TOKEN }}
-          ANTHROPIC_API_KEY:         ${{ secrets.ANTHROPIC_API_KEY }}
-          NOTION_DATABASE_ID:        ${{ secrets.NOTION_DATABASE_ID }}
-          NOTION_DATABASE_SAIDA_ID:  ${{ secrets.NOTION_DATABASE_SAIDA_ID }}
+          NOTION_TOKEN:                    ${{ secrets.NOTION_TOKEN }}
+          ANTHROPIC_API_KEY:               ${{ secrets.ANTRHOPIC_API_KEY }}
+          NOTION_DATABASE_ID:              ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_DATABASE_PAUTASPRONTAS_ID: ${{ secrets.NOTION_DATABASE_PAUTASPRONTAS_ID }}
         run: python scripts/pipeline.py
