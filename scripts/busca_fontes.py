@@ -74,14 +74,15 @@ FONTES_RSS = [
         ],
     },
     {
-        "nome": "Google News — Immigration France",
-        "url": "https://news.google.com/rss/search?q=immigration+France+loi+%C3%A9tranger+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Immigration France Loi Séjour",
+        "url": "https://news.google.com/rss/search?q=immigration+France+loi+%C3%A9tranger+s%C3%A9jour+travail+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P01", "P03"],
         "urgencia": "media",
         "keywords": [
-            "immigration", "étranger", "titre", "naturalisation",
-            "préfecture", "visa", "séjour", "loi"
+            "titre de séjour", "naturalisation", "visa travail",
+            "préfecture", "ANEF", "ressortissant", "autorisation de séjour",
+            "renouvellement", "passeport talent", "salarié étranger"
         ],
     },
     {
@@ -140,94 +141,51 @@ FONTES_RSS = [
         ],
     },
 
-    # ── Mídia generalista francesa (Google News filtrado por imigração/trabalho) ─
+    # ── Juridica: queries temáticas precisas (não por veículo, evita flood) ────
+    # Foco: o que muda na vida administrativa de quem tem título legal na França
     {
-        "nome": "Franceinfo — Immigration & Étrangers",
-        "url": "https://news.google.com/rss/search?q=site:francetvinfo.fr+immigration+%C3%A9tranger+s%C3%A9jour&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Titre de Séjour & Renouvellement",
+        "url": "https://news.google.com/rss/search?q=%22titre+de+s%C3%A9jour%22+renouvellement+pr%C3%A9fecture+ANEF+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
-        "personas": ["P01", "P02"],
-        "urgencia": "media",
+        "personas": ["P02", "P03"],
+        "urgencia": "alta",
         "keywords": [
-            "immigration", "étranger", "séjour", "titre", "visa",
-            "naturalisation", "migrant", "expulsion", "préfecture"
+            "titre de séjour", "renouvellement", "préfecture", "ANEF",
+            "récépissé", "carte de séjour", "dossier", "demande"
         ],
     },
     {
-        "nome": "20 Minutes — Immigration France",
-        "url": "https://news.google.com/rss/search?q=site:20minutes.fr+immigration+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Naturalisation Française Conditions",
+        "url": "https://news.google.com/rss/search?q=naturalisation+fran%C3%A7aise+crit%C3%A8res+d%C3%A9lai+conditions+ressortissant+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
-        "personas": ["P01", "P02"],
+        "personas": ["P03", "P04"],
         "urgencia": "media",
         "keywords": [
-            "immigration", "étranger", "migrant", "séjour", "visa",
-            "naturalisation", "préfecture", "titre"
+            "naturalisation", "française", "critères", "délai",
+            "conditions", "acquisition", "ressortissant", "décret"
         ],
     },
     {
-        "nome": "Le Parisien — Immigration & Société",
-        "url": "https://news.google.com/rss/search?q=site:leparisien.fr+immigration+%C3%A9tranger+int%C3%A9gration&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "juridica",
-        "personas": ["P01", "P02"],
-        "urgencia": "media",
-        "keywords": [
-            "immigration", "étranger", "migrant", "intégration",
-            "séjour", "naturalisation", "visa"
-        ],
-    },
-    {
-        "nome": "BFMTV — Immigration & Lois",
-        "url": "https://news.google.com/rss/search?q=site:bfmtv.com+immigration+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Passeport Talent Visa Travail",
+        "url": "https://news.google.com/rss/search?q=passeport+talent+visa+travail+salari%C3%A9+%C3%A9tranger+autorisation+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P01", "P03"],
-        "urgencia": "media",
+        "urgencia": "alta",
         "keywords": [
-            "immigration", "étranger", "migrant", "séjour",
-            "préfecture", "naturalisation", "loi immigration"
+            "passeport talent", "visa travail", "salarié", "autorisation de travail",
+            "titre", "qualification", "ressortissant", "étranger qualifié"
         ],
     },
     {
-        "nome": "Le Monde — Immigration & Politique Migratoire",
-        "url": "https://news.google.com/rss/search?q=site:lemonde.fr+immigration+%C3%A9tranger+politique+migratoire&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "juridica",
-        "personas": ["P03", "P04"],
-        "urgencia": "media",
-        "keywords": [
-            "immigration", "étranger", "migrant", "politique migratoire",
-            "titre de séjour", "naturalisation", "expulsion", "intégration"
-        ],
-    },
-    {
-        "nome": "Le Figaro — Immigration & Travail",
-        "url": "https://news.google.com/rss/search?q=site:lefigaro.fr+immigration+%C3%A9tranger+emploi&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "juridica",
-        "personas": ["P03", "P04"],
-        "urgencia": "media",
-        "keywords": [
-            "immigration", "étranger", "loi", "séjour",
-            "naturalisation", "migrant", "expulsion", "emploi"
-        ],
-    },
-    {
-        "nome": "Libération — Immigration & Droits",
-        "url": "https://news.google.com/rss/search?q=site:liberation.fr+immigration+%C3%A9tranger+droits&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "juridica",
-        "personas": ["P03", "P04"],
-        "urgencia": "media",
-        "keywords": [
-            "immigration", "étranger", "droit", "migrant",
-            "naturalisation", "expulsion", "rétention", "intégration"
-        ],
-    },
-    {
-        "nome": "The Local France (EN)",
+        "nome": "The Local France (EN) — Expat Practical",
         "url": "https://www.thelocal.fr/feed/",
         "categoria": "burocratica",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "keywords": [
-            "visa", "residency", "work permit", "immigration", "expat",
-            "tax", "health insurance", "bank", "titre de séjour",
-            "bureaucracy", "foreigner", "permit", "carte vitale"
+            "visa", "residency", "work permit", "expat", "foreigner",
+            "tax", "health insurance", "bank account", "titre de séjour",
+            "permit", "carte vitale", "French administration", "bureaucracy"
         ],
     },
 
@@ -285,6 +243,64 @@ FONTES_RSS = [
         "keywords": [
             "APEC", "cadres", "emploi", "recrutement", "salaires",
             "marché du travail", "ingénieur", "manager", "executive"
+        ],
+    },
+
+    # ── Academica: fontes especializadas em estudos e carreira na França ────────
+    {
+        "nome": "L'Étudiant — Études & Emploi en France",
+        "url": "https://www.letudiant.fr/rss.xml",
+        "categoria": "academica",
+        "personas": ["P01", "P02"],
+        "urgencia": "media",
+        "keywords": [
+            "étranger", "international", "visa étudiant", "master",
+            "alternance", "Campus France", "admission", "dossier",
+            "bourse", "doctorat", "inscription", "apprentissage"
+        ],
+    },
+    {
+        "nome": "Google News — Alternance France Étranger 2026",
+        "url": "https://news.google.com/rss/search?q=alternance+France+%C3%A9tranger+contrat+apprentissage+visa+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "academica",
+        "personas": ["P01", "P02"],
+        "urgencia": "media",
+        "keywords": [
+            "alternance", "apprentissage", "contrat", "étranger",
+            "visa étudiant", "CFA", "formation", "diplôme", "entreprise"
+        ],
+    },
+    {
+        "nome": "Google News — Master France Étudiants Internationaux",
+        "url": "https://news.google.com/rss/search?q=master+France+%C3%A9tudiants+internationaux+admission+universit%C3%A9+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "academica",
+        "personas": ["P01", "P02"],
+        "urgencia": "baixa",
+        "keywords": [
+            "master", "étudiants internationaux", "admission", "université",
+            "inscription", "dossier", "grandes écoles", "Campus France"
+        ],
+    },
+    {
+        "nome": "Google News — Emploi Qualifié Étranger Recrutement France",
+        "url": "https://news.google.com/rss/search?q=emploi+qualifi%C3%A9+%C3%A9tranger+recrutement+talent+contrat+France+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "academica",
+        "personas": ["P02", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "emploi", "qualifié", "étranger", "recrutement", "talent",
+            "contrat de travail", "CDI", "compétences", "intégration professionnelle"
+        ],
+    },
+    {
+        "nome": "Google News — Validation Diplôme Brésilien France",
+        "url": "https://news.google.com/rss/search?q=dipl%C3%B4me+%C3%A9tranger+reconnaissance+France+brésil+attestation+comparabilit%C3%A9&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "academica",
+        "personas": ["P02", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "diplôme", "étranger", "reconnaissance", "attestation",
+            "brésil", "comparabilité", "équivalence", "validation"
         ],
     },
     {
