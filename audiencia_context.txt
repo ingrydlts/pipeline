@@ -1,0 +1,47 @@
+# AUDIÊNCIA POR DENTRO — Contexto para análise editorial
+# Use este documento para explicar POR QUE um artigo importa para cada persona.
+
+## P01 — CAMILA, 26 anos (São Paulo → Paris em sonho)
+Situação: ainda no Brasil, pesquisa compulsiva à noite, nunca deu o primeiro passo.
+Emoção central: Curiosidade ansiosa → quer alívio e orientação.
+O que busca: Validação de que é possível. Clareza sobre o que esperar. Verdade sem assustar.
+Fica por: Conteúdo honesto que dá clareza sem dar medo.
+Sai por: Sensacionalismo, promessas fáceis, linguagem de guru.
+Gatilhos: "Vale a pena se mudar pra França?", comparações BR×FR, custo de vida, vistos para trabalhar.
+Medos: Dar um passo errado e se arrepender; não ser boa o suficiente; perder estabilidade.
+Pautas que convertem: vistos de trabalho, quanto dinheiro preciso, nível de francês necessário, CPF/status tributário na saída.
+KPI: CTR alto, novos inscritos, alcance frio.
+
+## P02 — LARISSA, 29 anos (Lyon · 8 meses na França · Alternance)
+Situação: recém-chegada, sobrecarregada com burocracia, executa passo a passo com o celular na mão.
+Emoção central: Ansiedade operacional → quer segurança e clareza imediata.
+O que busca: Passo a passo. Segurança. Sentir que não está sozinha.
+Fica por: Conteúdo ultra-prático implementável imediatamente.
+Sai por: Análises abstratas sem utilidade imediata; conteúdo muito reflexivo.
+Gatilhos: CAF, Sécu, titre de séjour, conta bancária, numéro fiscal, imposto de renda.
+Medos: Cometer erro no dossiê e perder o visto; titre de séjour atrasado; não avançar profissionalmente.
+Pautas que convertem: IR para quem chegou este ano, CAF como funciona, CEJU, saúde Sécu + mutuelle.
+KPI: Salvamentos, watchtime, compartilhamento direto, buscas orgânicas.
+
+## P03 — RENATA, 33 anos (Paris · 2,5 anos · Coordenadora de projetos)
+Situação: adaptada, quer otimizar carreira e entender quem se tornou; busca análise profunda.
+Emoção central: Vulnerabilidade identitária → quer insight e pertencimento.
+O que busca: Análise. Nuance. Reflexão que não encontra em outros canais.
+Fica por: Vídeos que ela manda para amigas dizendo "eu sinto exatamente isso."
+Sai por: Conteúdo muito básico — ela já sabe tudo isso.
+Gatilhos: Identidade, carreira francesa com currículo brasileiro, classe social, solidão e pertencimento.
+Medos: Perder identidade brasileira; nunca se sentir "de lá" nem "de cá"; ficar travada na carreira.
+Pautas que convertem: carreira francesa vs. brasileira, classe social, identidade do imigrante, investimentos/patrimônio binacional.
+KPI: Compartilhamentos, comentários longos, saves, indicações orgânicas.
+
+## P04 — AUDIÊNCIA NÃO CONQUISTADA (sub-grupos específicos)
+Situação: procuram sobre sua situação específica em português e não encontram nada.
+Emoção central: Invisibilidade → quer reconhecimento e pertencimento.
+Sub-grupos: 4A Felipe (dupla diplomação + alternance), 4B Mariana (direito FR + USP), 4C Diego (segunda tentativa após desistência), 4D Lis (lusófona não-brasileira).
+Gatilhos: dupla diplomação, contrato de trabalho francês, alternance, situações muito específicas.
+KPI: impressões novas, alcance frio, novos inscritos, buscas sem resultado.
+
+## REGRAS DE TOM
+- Nunca romantizar ("Paris é linda") nem catastrofizar ("é difícil demais")
+- Termos técnicos franceses em itálico: titre de séjour, récépissé, alternance, CAF, Sécu
+- Cada conteúdo gera: identificação imediata + uma ação clara + uma descoberta útil
