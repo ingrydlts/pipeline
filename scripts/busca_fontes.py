@@ -10,11 +10,24 @@ AUDIÊNCIA: Brasileiras imigrantes na França
   P02 Larissa  — recém-chegada (<18 meses), sobrecarregada com burocracia
   P03 Renata   — adaptada (2-5 anos), quer otimizar carreira e finanças
   P04 Non-conquis — situações específicas (alternance, duplo diploma, jurídico avançado)
+
+FILOSOFIA DE KEYWORDS (persona-mapped):
+  Cada keyword vem de uma dor real mapeada nas personas — não de termos genéricos.
+  Filtro duplo: keywords_incluir (ao menos 1) + keywords_excluir (qualquer 1 = descarta).
+  Artigos capturados = ouro bruto para Claude estruturar ganchos magnéticos.
+
+CATEGORIAS:
+  massa        → viral e cotidiano que cria gancho imediato (P01 + P04)
+  juridica     → leis e direitos que afetam quem já TEM título legal (P02 + P03)
+  burocratica  → passos práticos semanais: CAF, Sécu, ANEF, imposto (P02)
+  academica    → carreira, diplomas, alternance, CPF (P02 + P03)
+  civica       → redes de apoio, associações, língua (P02 + P03)
+  financas     → dinheiro real: investir, remessas, câmbio, PEA (P03 + P04)
+  trendmapping → identidade, choque cultural, saúde mental (P02 + P03)
 """
 
 import os
 import re
-import hashlib
 from datetime import datetime, timezone, timedelta
 import feedparser
 from notion_client import Client
@@ -25,201 +38,296 @@ notion = Client(auth=os.environ["NOTION_TOKEN"])
 claude  = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 
-# ─── Contexto de audiência (usado pelo Claude para "por que isso interessa?") ─
+# ─── Contexto de audiência ───────────────────────────────────────────────────
 AUDIENCIA_CONTEXT = open("scripts/audiencia_context.txt", encoding="utf-8").read()
 
 # ─── Parâmetros globais ───────────────────────────────────────────────────────
-JANELA_DIAS          = 8   # aceita artigos publicados nos últimos 8 dias
-MINIMO_POR_CATEGORIA = 5   # garante ao menos 5 rascunhos por categoria
+JANELA_DIAS          = 8
+MINIMO_POR_CATEGORIA = 5
 
 # ─── FONTES RSS ───────────────────────────────────────────────────────────────
-#
-# Cada fonte define:
-#   keywords         → ao menos UMA deve estar no título ou descrição (AND implícito no texto)
-#   keywords_excluir → se QUALQUER uma aparecer, o artigo é descartado
-#
-# FILOSOFIA DE FILTRO:
-#   Jurídica   → mudanças que afetam quem já TEM título legal (séjour, renovação, naturalization)
-#                NÃO: refugiados, OQTF, sem-papiers, travessias de fronteira
-#   Burocrática → passo a passo que P02 executa na semana: CAF, Sécu, ANEF, imposto
-#   Acadêmica  → estudar/trabalhar na França como estrangeiro qualificado
-#                NÃO: pesquisas universitárias, vestibular francês, rankings de faculdade
-#   Cívica     → direitos, redes de apoio, integração social — o que existe para nos ajudar
-#   Finanças   → dinheiro real do dia a dia: aluguel, salário, investir em euros, remessas
-#                NÃO: bolsa de valores, CAC 40, geopolítica financeira
-#   Trendmapping → identidade, choque cultural, saúde mental, vida cotidiana real na França
 
 FONTES_RSS = [
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # JURÍDICA — direitos e legislação que mudam a vida de quem já está na França
+    # MASSA — viral e cotidiano que cria gancho imediato
+    # Foco: P01 (curiosidade) e P04 (profundidade)
+    # Keywords: dores e eventos que geram pico de atenção imediata
     # ═══════════════════════════════════════════════════════════════════════════
     {
-        "nome": "GISTI — Droit des Étrangers",
+        # Grève = caos que afeta quem mora em Paris — post de rotina e sobrevivência
+        "nome": "Google News — Grève RATP & SNCF Transport Paris",
+        "url": "https://news.google.com/rss/search?q=gr%C3%A8ve+RATP+OR+gr%C3%A8ve+SNCF+perturbation+transport+Paris+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "massa",
+        "personas": ["P01", "P04"],
+        "urgencia": "alta",
+        "keywords": [
+            "grève RATP", "grève SNCF", "grève", "perturbation", "transport",
+            "Paris", "RER", "métro", "trafic", "ligne"
+        ],
+        "keywords_excluir": [],
+    },
+    {
+        # Réforme/Loi immigration = mudanças estruturais que geram pânico e audiência
+        "nome": "Google News — Réforme Immigration & Loi Asile",
+        "url": "https://news.google.com/rss/search?q=%22r%C3%A9forme+immigration%22+OR+%22loi+immigration%22+France+2026+%C3%A9tranger+s%C3%A9jour&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "massa",
+        "personas": ["P01", "P04"],
+        "urgencia": "alta",
+        "keywords": [
+            "réforme immigration", "loi immigration", "étranger", "séjour",
+            "ressortissant", "titre", "politique migratoire", "projet de loi"
+        ],
+        "keywords_excluir": ["réfugié", "asile", "sans-papiers", "Frontex", "Méditerranée"],
+    },
+    {
+        # Visa Paris / Titre IDF = gargalo das prefeituras — conteúdo de utilidade urgente
+        "nome": "Google News — Visa Paris & Titre de Séjour Île-de-France",
+        "url": "https://news.google.com/rss/search?q=%22visa+Paris%22+OR+%22titre+de+s%C3%A9jour+%C3%8Ele-de-France%22+pr%C3%A9fecture+attente+d%C3%A9lai&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "massa",
+        "personas": ["P01", "P02"],
+        "urgencia": "alta",
+        "keywords": [
+            "visa Paris", "titre de séjour Île-de-France", "préfecture",
+            "attente", "délai", "rendez-vous", "dossier", "ANEF"
+        ],
+        "keywords_excluir": [],
+    },
+    {
+        # Crise du logement = a maior dor de P01 antes de vir e P02 ao chegar
+        "nome": "Google News — Crise du Logement & Location Paris",
+        "url": "https://news.google.com/rss/search?q=%22crise+du+logement%22+OR+%22location+Paris%22+loyer+propri%C3%A9taire+%C3%A9tranger+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "massa",
+        "personas": ["P01", "P02"],
+        "urgencia": "alta",
+        "keywords": [
+            "crise du logement", "location Paris", "loyer", "propriétaire",
+            "garant", "logement", "hébergement", "Paris", "Île-de-France"
+        ],
+        "keywords_excluir": [],
+    },
+    {
+        # Pouvoir d'achat = gancho de impacto imediato com dados INSEE
+        "nome": "Google News — Pouvoir d'achat & Inflation France",
+        "url": "https://news.google.com/rss/search?q=%22pouvoir+d%27achat%22+OR+%22inflation+France%22+Paris+prix+co%C3%BBt+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "massa",
+        "personas": ["P01", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "pouvoir d'achat Paris", "inflation France", "prix", "coût",
+            "augmentation", "budget", "consommation", "dépenses"
+        ],
+        "keywords_excluir": ["CAC 40", "Wall Street", "bourse"],
+    },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # JURÍDICA — leis e direitos que mudam a vida de quem já TEM título legal
+    # Foco: P02 e P03 | Blacklist forte para réfugiés/OQTF em media généraliste
+    # Keywords diretas das dores: changement de statut, naturalisation, CDI/CDD
+    # ═══════════════════════════════════════════════════════════════════════════
+    {
+        "nome": "GISTI — Droit des Étrangers (curated)",
         "url": "https://www.gisti.org/spip.php?page=backend",
         "categoria": "juridica",
         "personas": ["P03", "P04"],
         "urgencia": "alta",
-        "keywords": [],  # feed já é curado — aceita tudo
+        "keywords": [],  # feed curado — aceita tudo; GISTI é 100% sobre direitos legais
         "keywords_excluir": [],
     },
     {
-        "nome": "La Cimade — Droits des Migrants",
+        # La Cimade: foco em acompanhamento jurídico, recours e direitos — não em drama
+        "nome": "La Cimade — Droits & Accompagnement Juridique",
         "url": "https://www.lacimade.org/feed/",
         "categoria": "juridica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "keywords": [
-            "titre de séjour", "séjour", "préfecture", "droit", "recours",
-            "naturalisation", "visa", "ressortissant", "carte de séjour", "ANEF"
+            "titre de séjour", "séjour", "droits des étrangers", "recours",
+            "naturalisation", "régularisation par le travail", "changement de statut",
+            "carte de séjour", "ANEF", "contrat de travail CDD CDI", "ressortissant"
         ],
         "keywords_excluir": [
-            "réfugié", "asile", "demandeur d'asile", "sans-papiers", "OQTF",
+            "réfugié", "asile", "demandeur d'asile", "sans-papiers",
             "Méditerranée", "Frontex", "traversée", "barque", "naufrage",
             "Syrie", "Mali", "Afghanistan", "Libye"
         ],
     },
     {
-        # Foco: o que muda para quem tem titre de séjour e precisa renovar
-        "nome": "Google News — Titre de Séjour & ANEF",
-        "url": "https://news.google.com/rss/search?q=%22titre+de+s%C3%A9jour%22+renouvellement+ANEF+pr%C3%A9fecture+France+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # Changement de statut = a transição mais comum de P03 (étudiant → salarié)
+        "nome": "Google News — Changement de Statut Étudiant → Salarié",
+        "url": "https://news.google.com/rss/search?q=%22changement+de+statut%22+%C3%A9tudiant+salari%C3%A9+France+visa+travail+r%C3%A9gularisation&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "keywords": [
-            "titre de séjour", "renouvellement", "préfecture", "ANEF",
-            "récépissé", "carte de séjour", "dossier", "demande"
-        ],
-        "keywords_excluir": [
-            "réfugié", "asile", "sans-papiers", "OQTF", "Méditerranée",
-            "Frontex", "traversée", "naufrage"
-        ],
-    },
-    {
-        # Foco: condições, prazos, critérios — o que P03 está planejando
-        "nome": "Google News — Naturalisation Française",
-        "url": "https://news.google.com/rss/search?q=naturalisation+fran%C3%A7aise+conditions+d%C3%A9lai+ressortissant+2026&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "juridica",
-        "personas": ["P03", "P04"],
-        "urgencia": "media",
-        "keywords": [
-            "naturalisation", "française", "conditions", "délai",
-            "critères", "acquisition", "ressortissant", "décret"
+            "changement de statut", "étudiant à salarié", "régularisation par le travail",
+            "autorisation de travail", "visa travail", "titre de séjour salarié"
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
     },
     {
-        # Foco: vistos de trabalho que P01 pesquisa antes de vir
-        "nome": "Google News — Passeport Talent & Visa Travail",
-        "url": "https://news.google.com/rss/search?q=%22passeport+talent%22+OR+%22visa+travail%22+%C3%A9tranger+autorisation+France+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # Renouvellement ANEF = dor imediata de P02 — "meu récépissé venceu"
+        "nome": "Google News — Renouvellement Titre de Séjour ANEF",
+        "url": "https://news.google.com/rss/search?q=%22renouvellement+titre+de+s%C3%A9jour%22+ANEF+pr%C3%A9fecture+France+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "juridica",
+        "personas": ["P02", "P03"],
+        "urgencia": "alta",
+        "keywords": [
+            "renouvellement titre de séjour", "ANEF", "préfecture",
+            "récépissé", "carte de séjour", "dossier", "délai"
+        ],
+        "keywords_excluir": ["réfugié", "asile", "sans-papiers", "OQTF"],
+    },
+    {
+        # Naturalisation = sonho de longo prazo de P03 — condições e critérios
+        "nome": "Google News — Naturalisation Française Conditions",
+        "url": "https://news.google.com/rss/search?q=%22naturalisation+fran%C3%A7aise+conditions%22+d%C3%A9lai+ressortissant+crit%C3%A8res+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "juridica",
+        "personas": ["P03", "P04"],
+        "urgencia": "media",
+        "keywords": [
+            "naturalisation française conditions", "naturalisation",
+            "conditions", "délai", "critères", "acquisition", "ressortissant"
+        ],
+        "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
+    },
+    {
+        # Passeport talent = visa que P01 quer entender antes de vir
+        "nome": "Google News — Passeport Talent & Visa Travail Qualifié",
+        "url": "https://news.google.com/rss/search?q=%22passeport+talent%22+OR+%22visa+travail%22+%C3%A9tranger+autoris%C3%A9+France+qualification+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P01", "P03"],
         "urgencia": "alta",
         "keywords": [
-            "passeport talent", "visa travail", "salarié", "autorisation de travail",
-            "qualification", "ressortissant", "étranger qualifié", "titre"
+            "passeport talent", "visa travail", "autorisation de travail",
+            "étranger qualifié", "salarié", "qualification", "titre"
         ],
         "keywords_excluir": ["réfugié", "asile"],
     },
     {
-        # Foco: mudanças de lei que afetam imigrantes com status legal
-        "nome": "Google News — Légifrance Séjour & Naturalisation",
-        "url": "https://news.google.com/rss/search?q=legifrance+%C3%A9trangers+s%C3%A9jour+naturalisation+ressortissant&hl=fr&gl=FR&ceid=FR:fr",
+        # Droits travail = CDI/CDD, rupture conventionnelle — o que P03 precisa saber
+        "nome": "Google News — Contrat Travail CDD CDI Droits Étrangers",
+        "url": "https://news.google.com/rss/search?q=%22contrat+de+travail%22+CDD+CDI+droits+%C3%A9tranger+France+salar%C3%A9+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "juridica",
+        "personas": ["P02", "P03"],
+        "urgencia": "media",
+        "keywords": [
+            "contrat de travail CDD CDI", "droits des étrangers",
+            "salarié étranger", "rupture conventionnelle", "licenciement",
+            "durée légale", "congés payés", "protection"
+        ],
+        "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
+    },
+    {
+        # Légifrance = decretos e circulares — P04 quer a fonte primária
+        "nome": "Google News — Légifrance Décrets Étrangers",
+        "url": "https://news.google.com/rss/search?q=legifrance+%C3%A9trangers+s%C3%A9jour+naturalisation+CESEDA+d%C3%A9cret&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P03", "P04"],
         "urgencia": "alta",
         "keywords": [
-            "étranger", "naturalisation", "séjour", "ressortissant",
-            "CESEDA", "titre", "décret", "circulaire"
+            "CESEDA", "décret", "circulaire", "étranger", "séjour",
+            "naturalisation", "ressortissant", "arrêté", "code entrée séjour"
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers", "OQTF"],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # BUROCRÁTICA — os passos práticos que P02 executa toda semana
+    # BUROCRÁTICA — os passos que P02 executa toda semana
+    # Keywords: termos exatos dos formulários e plataformas reais
+    # Gerador principal de salvamentos no Instagram
     # ═══════════════════════════════════════════════════════════════════════════
     {
-        "nome": "Google News — CAF APL Logement Étrangers",
-        "url": "https://news.google.com/rss/search?q=CAF+APL+allocation+logement+%C3%A9trangers+France&hl=fr&gl=FR&ceid=FR:fr",
+        # APL = a ajuda que todo recém-chegado precisa — demande APL e plafond CAF
+        "nome": "Google News — Demande APL & Plafond CAF Étrangers",
+        "url": "https://news.google.com/rss/search?q=%22demande+APL%22+OR+%22plafond+CAF%22+allocation+logement+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "keywords": [
-            "CAF", "APL", "allocation", "logement", "aide", "prestation",
-            "revenu", "ressortissant", "étranger"
+            "demande APL", "plafond CAF", "CAF", "APL", "allocation logement",
+            "aide", "prestation", "étranger", "résidence"
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — ANEF Service-Public Démarches Étrangers",
-        "url": "https://news.google.com/rss/search?q=ANEF+service-public+%C3%A9tranger+d%C3%A9marche+renouvellement+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # ANEF = a plataforma onde tudo acontece — démarches digitais P02
+        "nome": "Google News — ANEF Démarches Numériques Étrangers",
+        "url": "https://news.google.com/rss/search?q=ANEF+service-public+%C3%A9tranger+d%C3%A9marche+t%C3%A9l%C3%A9proc%C3%A9dure+renouvellement+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P01", "P02"],
         "urgencia": "alta",
         "keywords": [
-            "étranger", "démarche", "ANEF", "préfecture",
-            "renouvellement", "carte de séjour", "téléprocédure"
+            "ANEF", "téléservice", "téléprocédure", "démarche en ligne",
+            "étranger", "renouvellement", "carte de séjour", "préfecture"
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Ameli Sécu Carte Vitale Étrangers",
-        "url": "https://news.google.com/rss/search?q=ameli+assurance+maladie+%C3%A9trangers+carte+vitale+s%C3%A9cu+France&hl=fr&gl=FR&ceid=FR:fr",
+        # Numéro sécu provisoire = A MAIOR dor de P02 nos primeiros meses
+        "nome": "Google News — Numéro Sécu Provisoire & Carte Vitale Étranger",
+        "url": "https://news.google.com/rss/search?q=%22num%C3%A9ro+de+s%C3%A9curit%C3%A9+sociale+provisoire%22+OR+%22attestation+de+droits+ameli%22+%C3%A9tranger+carte+vitale&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "burocratica",
+        "personas": ["P02"],
+        "urgencia": "alta",
+        "keywords": [
+            "numéro de sécurité sociale provisoire", "attestation de droits ameli",
+            "carte vitale étranger", "ameli", "assurance maladie",
+            "remboursement", "mutuelle", "étranger"
+        ],
+        "keywords_excluir": [],
+    },
+    {
+        # Micro-entreprise = freelancer na França — criação e cotisações URSSAF
+        "nome": "Google News — Création Micro-entreprise URSSAF Étranger",
+        "url": "https://news.google.com/rss/search?q=%22cr%C3%A9ation+micro-entreprise%22+URSSAF+%22auto-entrepreneur+%C3%A9tranger%22+freelance+France+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "keywords": [
-            "ameli", "assurance maladie", "carte vitale", "sécurité sociale",
-            "mutuelle", "remboursement", "numéro de sécu", "étranger"
+            "création micro-entreprise URSSAF", "auto-entrepreneur étranger",
+            "URSSAF", "indépendant", "freelance", "cotisations", "auto-entrepreneur"
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — URSSAF Auto-entrepreneur Étranger",
-        "url": "https://news.google.com/rss/search?q=URSSAF+auto-entrepreneur+freelance+ind%C3%A9pendant+%C3%A9tranger+France+2026&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "burocratica",
-        "personas": ["P02", "P03"],
-        "urgencia": "media",
-        "keywords": [
-            "URSSAF", "auto-entrepreneur", "indépendant", "freelance",
-            "micro-entreprise", "cotisations", "étranger", "travailleur"
-        ],
-        "keywords_excluir": [],
-    },
-    {
-        "nome": "Google News — Impôts Déclaration Étrangers France",
-        "url": "https://news.google.com/rss/search?q=imp%C3%B4ts+d%C3%A9claration+%C3%A9trangers+France+r%C3%A9sident+fiscal&hl=fr&gl=FR&ceid=FR:fr",
+        # Déclaration impôts non-résident = confusão que P02 tem todo ano de abril
+        "nome": "Google News — Déclaration Impôts Non-Résident Prélèvement Source",
+        "url": "https://news.google.com/rss/search?q=%22d%C3%A9claration+d%27imp%C3%B4ts+non-r%C3%A9sident%22+OR+%22pr%C3%A9l%C3%A8vement+%C3%A0+la+source%22+%C3%A9tranger+France+fiscal&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "keywords": [
-            "impôt", "déclaration", "résident fiscal", "étranger",
-            "impots.gouv", "IR", "avis d'imposition", "non-résident"
+            "déclaration d'impôts non-résident", "prélèvement à la source",
+            "déclaration impôt", "résident fiscal", "non-résident",
+            "impots.gouv", "avis d'imposition", "étranger"
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "The Local France — Expat Practical Guide (EN)",
+        # The Local em inglês = P03 e P04 que consomem em inglês também
+        "nome": "The Local France — Expat Admin Guide (EN)",
         "url": "https://www.thelocal.fr/feed/",
         "categoria": "burocratica",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "keywords": [
-            "visa", "residency", "work permit", "expat", "foreigner",
-            "tax", "health insurance", "bank account", "titre de séjour",
-            "permit", "carte vitale", "French administration", "bureaucracy",
-            "social security", "CAF", "housing benefit"
+            "visa", "work permit", "residency", "expat", "foreigner",
+            "tax declaration", "health insurance", "titre de séjour",
+            "carte vitale", "French administration", "CAF", "housing benefit",
+            "social security number", "bank account foreigner"
         ],
         "keywords_excluir": ["refugee", "asylum", "boat", "Mediterranean"],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # ACADÊMICA — estudar E trabalhar na França como estrangeiro qualificado
-    # NÃO é sobre pesquisa científica ou vestibular francês — é sobre a jornada
-    # de quem quer validar seu diploma, conseguir alternance ou subir na carreira
+    # ACADÊMICA — carreira, diplomas, alternance, CPF
+    # Foco: P02 (entrar no mercado) e P03 (subir na carreira)
+    # NÃO: pesquisa científica, vestibular, ranking universidade
     # ═══════════════════════════════════════════════════════════════════════════
     {
-        "nome": "L'Étudiant — Études & Emploi en France",
+        # L'Étudiant: foco em estrangeiros e alternance, não em bac/terminale
+        "nome": "L'Étudiant — Alternance & Emploi Étranger",
         "url": "https://www.letudiant.fr/rss.xml",
         "categoria": "academica",
         "personas": ["P01", "P02"],
@@ -227,185 +335,207 @@ FONTES_RSS = [
         "keywords": [
             "étranger", "international", "visa étudiant", "alternance",
             "Campus France", "admission", "master", "apprentissage",
-            "titre professionnel", "inscription", "formation"
+            "titre professionnel", "bourses d'études étudiants étrangers"
         ],
         "keywords_excluir": [
-            "bac", "terminale", "lycée", "parcoursup", "concours prépa",
-            "classes prépa", "brevet", "collège", "primaire"
+            "bac", "terminale", "lycée", "parcoursup", "classes prépa",
+            "brevet", "collège", "primaire", "Nobel", "classement"
         ],
     },
     {
-        # P01 e P02: alternance é O caminho mais viável para entrar no mercado
-        "nome": "Google News — Alternance Étrangers France 2026",
-        "url": "https://news.google.com/rss/search?q=alternance+France+%C3%A9tranger+visa+contrat+apprentissage+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # Alternance = O caminho mais viável para P01/P02 entrar no mercado francês
+        "nome": "Google News — Alternance Étranger Contrat Apprentissage",
+        "url": "https://news.google.com/rss/search?q=alternance+France+%C3%A9tranger+visa+%22contrat+d%27apprentissage%22+CFA+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P01", "P02"],
         "urgencia": "media",
         "keywords": [
-            "alternance", "apprentissage", "étranger", "contrat",
+            "alternance", "apprentissage", "étranger", "contrat d'apprentissage",
             "visa étudiant", "CFA", "formation", "diplôme", "entreprise"
         ],
         "keywords_excluir": ["bac", "lycée", "parcoursup"],
     },
     {
-        # P02 e P03: "meu diploma vale algo aqui?"
-        "nome": "Google News — Reconnaissance Diplôme Étranger France",
-        "url": "https://news.google.com/rss/search?q=reconnaissance+dipl%C3%B4me+%C3%A9tranger+France+attestation+emploi+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # ENIC-NARIC = "meu diploma vale algo aqui?" — dor universal de P02/P03
+        "nome": "Google News — Attestation Comparabilité ENIC-NARIC Diplôme",
+        "url": "https://news.google.com/rss/search?q=%22attestation+de+comparabilit%C3%A9%22+ENIC-NARIC+dipl%C3%B4me+%C3%A9tranger+France+emploi+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "keywords": [
-            "diplôme étranger", "reconnaissance", "attestation",
-            "équivalence", "ENIC-NARIC", "comparabilité",
+            "attestation de comparabilité ENIC-NARIC", "diplôme étranger",
+            "reconnaissance", "équivalence", "comparabilité",
             "validation", "VAE", "étranger qualifié"
         ],
         "keywords_excluir": [],
     },
     {
-        # P03 e P04: evoluir na carreira francesa — salários, recrutamento, cadres
-        "nome": "Google News — APEC Emploi Cadres Étrangers Qualification",
-        "url": "https://news.google.com/rss/search?q=emploi+cadres+%C3%A9tranger+qualification+recrutement+salaire+France+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # Recrutement cadres = P03 quer subir na carreira — salários e vagas reais
+        "nome": "Google News — Recrutement Cadres Paris Marché du Travail",
+        "url": "https://news.google.com/rss/search?q=%22recrutement+cadres+Paris%22+OR+%22march%C3%A9+du+travail+cadres%22+%C3%A9tranger+salaire+qualification+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "keywords": [
-            "emploi", "cadres", "étranger", "recrutement", "salaire",
-            "qualification", "contrat CDI", "marché du travail", "APEC"
+            "recrutement cadres Paris", "marché du travail cadres",
+            "emploi", "cadres", "étranger", "salaire", "qualification",
+            "contrat CDI", "APEC", "ingénieur étranger"
         ],
         "keywords_excluir": [],
     },
     {
-        # P01: "como entro no sistema universitário francês?"
-        "nome": "Google News — Campus France Visa Étudiant Brésil",
-        "url": "https://news.google.com/rss/search?q=Campus+France+visa+%C3%A9tudiant+br%C3%A9sil+admission+master+2026&hl=fr&gl=FR&ceid=FR:fr",
+        # Campus France = processo de entrada P01 — bolsas e admissão
+        "nome": "Google News — Campus France Bourses Étudiants Étrangers",
+        "url": "https://news.google.com/rss/search?q=%22Campus+France%22+%22bourses+d%27%C3%A9tudes+%C3%A9tudiants+%C3%A9trangers%22+OR+%22visa+%C3%A9tudiant%22+br%C3%A9sil+admission+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P01", "P02"],
         "urgencia": "baixa",
         "keywords": [
-            "Campus France", "visa étudiant", "brésil", "admission",
-            "master", "université", "bourse", "dossier", "étudiant étranger"
+            "Campus France", "bourses d'études étudiants étrangers",
+            "visa étudiant", "brésil", "admission", "master",
+            "université", "dossier", "étudiant étranger"
         ],
         "keywords_excluir": [],
     },
     {
-        # P02 e P03: créditos de formação que qualquer trabalhador acumula
-        "nome": "Google News — CPF Formation Professionnelle Étranger",
-        "url": "https://news.google.com/rss/search?q=%22compte+personnel+de+formation%22+CPF+%C3%A9tranger+formation+salari%C3%A9+France&hl=fr&gl=FR&ceid=FR:fr",
+        # CPF = dinheiro de formação que o trabalhador acumula — ninguém explica isso
+        "nome": "Google News — CPF Compte Personnel Formation Droits Salarié",
+        "url": "https://news.google.com/rss/search?q=%22compte+personnel+de+formation+%28CPF%29+droits%22+salar%C3%A9+%C3%A9tranger+certification+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "keywords": [
-            "CPF", "compte personnel de formation", "formation professionnelle",
-            "salarié", "étranger", "certification", "financement", "apprentissage"
+            "compte personnel de formation CPF droits", "CPF",
+            "formation professionnelle", "salarié", "étranger",
+            "certification", "financement", "droits formation"
         ],
         "keywords_excluir": [],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # CÍVICA — o que existe para nos apoiar: redes, direitos, comunidade
+    # CÍVICA — redes de apoio, língua, integração
     # ═══════════════════════════════════════════════════════════════════════════
     {
-        "nome": "La Cimade — Vie Civique & Droits",
+        "nome": "La Cimade — Vie Civique & Accompagnement",
         "url": "https://www.lacimade.org/feed/",
         "categoria": "civica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "keywords": [
             "droit", "association", "accompagnement", "soutien",
-            "intégration", "communauté", "réseau", "aide juridique"
+            "intégration", "communauté", "réseau", "aide juridique", "bénévolat"
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Associations Intégration Migrants France",
-        "url": "https://news.google.com/rss/search?q=association+int%C3%A9gration+migrants+France+r%C3%A9seau+soutien+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Associations Intégration Singa CIUP Migrants",
+        "url": "https://news.google.com/rss/search?q=association+int%C3%A9gration+migrants+France+r%C3%A9seau+Singa+CIUP+soutien+2026&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "civica",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "keywords": [
             "intégration", "migrants", "association", "réseau", "soutien",
-            "accompagnement", "communauté", "Singa", "bénévolat"
+            "accompagnement", "communauté", "Singa", "CIUP", "bénévolat"
         ],
         "keywords_excluir": [],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # FINANÇAS — dinheiro real: aluguel, salário, investir em euros, remessas
-    # NÃO é sobre bolsa de valores ou macroeconomia abstrata
+    # FINANÇAS — inteligência financeira bi-nacional
+    # Foco: P03 e P04 que querem fazer o euro render
+    # NÃO: CAC 40, Wall Street, bolsa abstrata
     # ═══════════════════════════════════════════════════════════════════════════
     {
-        "nome": "Café de la Bourse — Investissements Pratiques",
+        # PEA e Assurance Vie = os dois produtos que qualquer residente fiscal deve ter
+        "nome": "Google News — Ouverture PEA & Meilleure Assurance Vie Résident",
+        "url": "https://news.google.com/rss/search?q=%22ouverture+PEA%22+OR+%22meilleure+assurance+vie%22+r%C3%A9sident+France+%C3%A9pargne+fiscalit%C3%A9+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "financas",
+        "personas": ["P03", "P04"],
+        "urgencia": "baixa",
+        "keywords": [
+            "ouverture PEA", "meilleure assurance vie", "PEA",
+            "assurance-vie", "épargne", "résident fiscal", "placement",
+            "livret", "fiscalité", "patrimoine"
+        ],
+        "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire", "dividende"],
+    },
+    {
+        # Café de la Bourse = análises práticas de investimento para residentes
+        "nome": "Café de la Bourse — Investissements Résidents France",
         "url": "https://www.cafedelabourse.com/feed",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "baixa",
         "keywords": [
-            "PEA", "assurance vie", "déclaration", "investissement",
-            "épargne", "fiscalité", "patrimoine", "livret", "placement"
+            "PEA", "assurance vie", "épargne", "investissement",
+            "fiscalité", "patrimoine", "livret A", "placement",
+            "ouverture PEA", "meilleure assurance vie"
         ],
         "keywords_excluir": ["CAC 40", "Wall Street", "action", "dividende", "géopolitique"],
     },
     {
-        # Custo de vida REAL — o que P01 quer saber antes de vir, P03 quer comparar
-        "nome": "Google News — Coût de Vie Loyer Expatrié France",
-        "url": "https://news.google.com/rss/search?q=co%C3%BBt+de+la+vie+loyer+logement+salaire+expatri%C3%A9+France+2026&hl=fr&gl=FR&ceid=FR:fr",
-        "categoria": "financas",
-        "personas": ["P01", "P03"],
-        "urgencia": "media",
-        "keywords": [
-            "coût de la vie", "loyer", "logement", "salaire", "smic",
-            "pouvoir d'achat", "prix", "budget", "expatrié", "inflation"
-        ],
-        "keywords_excluir": ["CAC 40", "Wall Street", "bourse", "actionnaire"],
-    },
-    {
-        # Fiscalidade binacional — a dor de P03 que mora entre dois países
-        "nome": "Google News — Fiscalité Expatriés Brésil France",
-        "url": "https://news.google.com/rss/search?q=fiscalit%C3%A9+expatri%C3%A9s+France+imp%C3%B4t+%C3%A9tranger+convention+br%C3%A9sil&hl=fr&gl=FR&ceid=FR:fr",
+        # Fiscalité compte étranger Brésil = bitributação — a dor invisível de P03
+        "nome": "Google News — Fiscalité Compte Étranger Brésil Convention",
+        "url": "https://news.google.com/rss/search?q=%22fiscalit%C3%A9+compte+%C3%A0+l%27%C3%A9tranger%22+br%C3%A9sil+France+convention+imp%C3%B4t+expatri%C3%A9&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "keywords": [
-            "impôt", "déclaration", "expatrié", "non-résident",
-            "fiscalité", "convention fiscale", "brésil", "patrimoine", "sortie définitive"
+            "fiscalité compte à l'étranger Brésil", "convention fiscale",
+            "bitributação", "impôt", "non-résident", "expatrié",
+            "patrimoine", "déclaration compte étranger"
         ],
         "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire"],
     },
     {
-        # Investimentos disponíveis para quem mora na França (residente fiscal)
-        "nome": "Google News — PEA Assurance-Vie Expatrié Résident France",
-        "url": "https://news.google.com/rss/search?q=PEA+assurance-vie+%C3%A9pargne+r%C3%A9sident+France+expatri%C3%A9+placement&hl=fr&gl=FR&ceid=FR:fr",
+        # Sortie définitive Brésil = a burocracia financeira de quem decidiu ficar
+        "nome": "Google News — Déclaration Sortie Définitive Brésil Fiscal",
+        "url": "https://news.google.com/rss/search?q=%22d%C3%A9claration+de+sortie+d%C3%A9finitive%22+OR+%22saida+definitiva%22+br%C3%A9sil+fiscal+imp%C3%B4t+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
-        "urgencia": "baixa",
+        "urgencia": "media",
         "keywords": [
-            "PEA", "assurance-vie", "épargne", "placement", "résident fiscal",
-            "expatrié", "livret", "fiscalité", "rendement"
+            "déclaration de sortie définitive", "saída definitiva",
+            "Brésil", "fiscal", "impôt", "non-résident", "Receita Federal",
+            "declaração", "capital extérieur"
         ],
-        "keywords_excluir": ["CAC 40", "actionnaire", "dividende"],
+        "keywords_excluir": [],
     },
     {
-        # Remessas Brasil-França — envio de dinheiro entre países
-        "nome": "Google News — Remessas Virement Brésil France Change",
-        "url": "https://news.google.com/rss/search?q=virement+international+br%C3%A9sil+France+change+remise+r%C3%A8gles&hl=fr&gl=FR&ceid=FR:fr",
+        # Taux de change / Transfert fonds = remessas — quanto custa mandar dinheiro
+        "nome": "Google News — Taux de Change Euro Real & Transfert Fonds International",
+        "url": "https://news.google.com/rss/search?q=%22taux+de+change+euro+real%22+OR+%22transfert+de+fonds+international%22+Wise+br%C3%A9sil+France+remesse&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "keywords": [
-            "virement international", "brésil", "change", "euro", "remise",
-            "transfert argent", "Wise", "banque", "taux de change"
+            "taux de change euro real", "transfert de fonds international",
+            "virement international", "Brésil", "Wise", "change", "euro",
+            "remesse", "banque", "taux"
         ],
         "keywords_excluir": [],
     },
+    {
+        # INSEE coût de vie = dados duros para ancorar conteúdo — "segundo o INSEE..."
+        "nome": "Google News — Indice Prix Consommation INSEE Coût Vie",
+        "url": "https://news.google.com/rss/search?q=%22indice+des+prix+%C3%A0+la+consommation%22+INSEE+co%C3%BBt+vie+salaire+logement+France+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "categoria": "financas",
+        "personas": ["P01", "P03"],
+        "urgencia": "baixa",
+        "keywords": [
+            "indice des prix à la consommation INSEE", "INSEE", "coût de la vie",
+            "salaire", "logement", "inflation", "pouvoir d'achat", "données"
+        ],
+        "keywords_excluir": ["CAC 40", "actionnaire"],
+    },
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # TRENDMAPPING — identidade, choque cultural, vida cotidiana REAL na França
-    # É o conteúdo que P03 compartilha dizendo "eu sinto exatamente isso"
+    # TRENDMAPPING — identidade, choque cultural, saúde mental
+    # O conteúdo que P03 compartilha dizendo "eu sinto exatamente isso"
     # ═══════════════════════════════════════════════════════════════════════════
     {
-        # Choque cultural, adaptação — o que P02 vive e P03 já viveu
-        "nome": "Google News — Choc Culturel Expatrié Vie France",
-        "url": "https://news.google.com/rss/search?q=%22choc+culturel%22+OR+%22vie+d%27expatri%C3%A9%22+OR+%22adaptation%22+immigrant+France+quotidien&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Choc Culturel & Adaptation Expatrié France",
+        "url": "https://news.google.com/rss/search?q=%22choc+culturel%22+OR+%22adaptation%22+expatri%C3%A9+immigrant+France+quotidien+int%C3%A9gration&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "trendmapping",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
@@ -416,40 +546,38 @@ FONTES_RSS = [
         "keywords_excluir": [],
     },
     {
-        # Identidade — a dor invisível que P03 sente mas não consegue nomear
-        "nome": "Google News — Identité Biculturelle Immigrant France",
-        "url": "https://news.google.com/rss/search?q=identit%C3%A9+biculturelle+OR+%22entre+deux+cultures%22+OR+%22appartenance%22+immigrant+France&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Identité Biculturelle Entre Deux Cultures",
+        "url": "https://news.google.com/rss/search?q=%22identit%C3%A9+biculturelle%22+OR+%22entre+deux+cultures%22+OR+%22appartenance%22+immigrant+France+br%C3%A9sil&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "trendmapping",
         "personas": ["P03", "P04"],
         "urgencia": "baixa",
         "keywords": [
-            "identité", "biculturel", "entre deux cultures", "appartenance",
+            "identité biculturelle", "entre deux cultures", "appartenance",
             "immigrant", "brésil", "intégration culturelle", "sentiment"
         ],
         "keywords_excluir": [],
     },
     {
-        # Saúde mental — P02 sobrecarregada, P03 questionando escolhas
-        "nome": "Google News — Santé Mentale Expatriés Anxiété France",
-        "url": "https://news.google.com/rss/search?q=sant%C3%A9+mentale+expatri%C3%A9s+OR+%22syndrome+de+paris%22+OR+%22burnout+expatri%C3%A9%22+France&hl=fr&gl=FR&ceid=FR:fr",
+        # Syndrome de Paris / santé mentale expatriés = P02 sobrecarregada não fala nisso
+        "nome": "Google News — Santé Mentale Expatriés Syndrome de Paris",
+        "url": "https://news.google.com/rss/search?q=%22sant%C3%A9+mentale+expatri%C3%A9s%22+OR+%22syndrome+de+paris%22+OR+%22burnout+expatri%C3%A9%22+France+bien-%C3%AAtre&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "trendmapping",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "keywords": [
-            "santé mentale", "expatrié", "anxiété", "burnout",
-            "syndrome de paris", "isolement", "dépression", "bien-être"
+            "santé mentale expatriés", "syndrome de paris",
+            "burnout expatrié", "anxiété", "isolement", "dépression", "bien-être"
         ],
         "keywords_excluir": [],
     },
     {
-        # Mercado de trabalho real — diferenças culturais que P03 enfrenta no escritório
         "nome": "Google News — Travail France Différences Culturelles Brésil",
-        "url": "https://news.google.com/rss/search?q=travail+France+diff%C3%A9rences+culturelles+br%C3%A9sil+expatri%C3%A9+int%C3%A9gration&hl=fr&gl=FR&ceid=FR:fr",
+        "url": "https://news.google.com/rss/search?q=travail+France+%22diff%C3%A9rences+culturelles%22+br%C3%A9sil+expatri%C3%A9+management+int%C3%A9gration&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "trendmapping",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "keywords": [
-            "travail", "France", "différences culturelles", "brésil",
+            "différences culturelles", "travail France", "brésil",
             "expatrié", "collègues", "management", "intégration professionnelle"
         ],
         "keywords_excluir": [],
@@ -465,7 +593,7 @@ def normalizar_texto(texto: str) -> str:
 
 
 def contem_keyword(titulo: str, descricao: str, keywords: list) -> bool:
-    """Retorna True se ao menos uma keyword aparecer no texto (lista vazia = aceita tudo)."""
+    """Retorna True se ao menos UMA keyword aparecer (lista vazia = aceita tudo)."""
     if not keywords:
         return True
     texto = (titulo + ' ' + descricao).lower()
@@ -473,7 +601,7 @@ def contem_keyword(titulo: str, descricao: str, keywords: list) -> bool:
 
 
 def contem_blacklist(titulo: str, descricao: str, blacklist: list) -> bool:
-    """Retorna True se alguma palavra da blacklist aparecer — artigo deve ser descartado."""
+    """Retorna True se algum termo da blacklist aparecer — artigo descartado."""
     if not blacklist:
         return False
     texto = (titulo + ' ' + descricao).lower()
@@ -501,7 +629,7 @@ def url_ja_existe_no_notion(url: str) -> bool:
 
 
 def gerar_por_que_interessa(titulo: str, descricao: str, fonte: dict) -> str:
-    """Chama Claude Haiku para gerar 2-3 frases de relevância editorial baseadas na audiência."""
+    """Claude Haiku gera 2-3 frases de relevância editorial baseadas nas personas."""
     personas_str = " e ".join(fonte["personas"])
     prompt = f"""Você é editora sênior do canal Por Dentro — canal YouTube/Instagram para brasileiras imigrantes na França.
 
@@ -611,18 +739,18 @@ def processar_fonte_rss(fonte: dict, criados_por_categoria: dict,
 def main():
     data_hoje = datetime.now().strftime('%d/%m/%Y')
     print(f"\n🔍 CAMADA 1 — Por Dentro ({data_hoje})")
-    print(f"   Janela: últimos {JANELA_DIAS} dias | Mínimo por categoria: {MINIMO_POR_CATEGORIA}\n")
+    print(f"   {len(FONTES_RSS)} fontes | Janela: {JANELA_DIAS} dias | Mínimo/categoria: {MINIMO_POR_CATEGORIA}\n")
 
     total_criados = 0
     criados_por_categoria = {}
 
-    # ── 1ª passagem: filtros completos (keywords + blacklist) ─────────────────
-    print("── Passagem 1: filtros por audiência ──")
+    # ── 1ª passagem: filtro cirúrgico completo (keywords + blacklist) ──────────
+    print("── Passagem 1: filtros por persona ──")
     for fonte in FONTES_RSS:
         qtd = processar_fonte_rss(fonte, criados_por_categoria)
         total_criados += qtd
 
-    # ── 2ª passagem: reforça categorias abaixo do mínimo (sem keyword filter) ─
+    # ── 2ª passagem: reforça categorias abaixo do mínimo ──────────────────────
     todas_categorias = set(f["categoria"] for f in FONTES_RSS)
     abaixo = [c for c in todas_categorias if criados_por_categoria.get(c, 0) < MINIMO_POR_CATEGORIA]
 
@@ -633,8 +761,7 @@ def main():
             fontes_por_cat.setdefault(f["categoria"], []).append(f)
 
         for cat in abaixo:
-            faltam = MINIMO_POR_CATEGORIA - criados_por_categoria.get(cat, 0)
-            print(f"\n  🔄 '{cat}': {criados_por_categoria.get(cat, 0)} → buscando mais {faltam}")
+            print(f"\n  🔄 '{cat}': {criados_por_categoria.get(cat, 0)} → buscando sem filtro de keyword")
             for fonte in fontes_por_cat.get(cat, []):
                 if criados_por_categoria.get(cat, 0) >= MINIMO_POR_CATEGORIA:
                     break
@@ -642,14 +769,14 @@ def main():
                 total_criados += qtd
 
     # ── Resumo ────────────────────────────────────────────────────────────────
-    print(f"\n{'═'*55}")
+    print(f"\n{'═'*60}")
     print(f"✅ Camada 1 concluída: {total_criados} rascunho(s) criado(s) no Notion")
     for cat in sorted(todas_categorias):
         n = criados_por_categoria.get(cat, 0)
         flag = "✓" if n >= MINIMO_POR_CATEGORIA else "⚠ abaixo do mínimo"
         print(f"   {flag} {cat}: {n}")
-    print(f"   Próximo: Camada 2 na segunda-feira estrutura com Claude")
-    print(f"{'═'*55}\n")
+    print(f"   Próximo: curadoria manual → Camada 2 estrutura com Claude")
+    print(f"{'═'*60}\n")
 
 
 if __name__ == "__main__":
