@@ -164,13 +164,8 @@ def garantir_propriedades_saida():
                 # ── Produto e landing page ────────────────────────────────────
                 "Produto Sugerido":      {"rich_text": {}},
                 "Landing Page URL":      {"url": {}},
-                # Relation a Páginas Online — cria se não existir
-                "🌐 Página Online": {
-                    "relation": {
-                        "database_id":   PAGINAS_ONLINE_DB_ID,
-                        "single_property": {}
-                    }
-                },
+                # Nota: "🌐 Páginas Online (1)" já existe como relation nativa desta base.
+                # Não recriamos — apenas usamos na escrita de páginas.
                 # ── Pilar editorial e tom de voz (espelham INSTA TO POR DENTRO) ──
                 "Pilar":      {"select": {}},
                 "Voice Tone": {"select": {}},
@@ -387,8 +382,9 @@ def escrever_no_notion(p: dict):
     urgencia_raw = p.get("urgency", "")
     urgencia_val = _URGENCIA_VALIDOS.get(urgencia_raw.lower(), urgencia_raw) or "media"
 
+    # Título da base é "Name" (não "Título") nesta base de dados
     properties = {
-        "Título": {
+        "Name": {
             "title": [{"text": {"content": p["title"]}}]
         },
         "Gancho": {
@@ -423,9 +419,9 @@ def escrever_no_notion(p: dict):
         "Status":            {"select":       {"name": "Pronta"}},
     }
 
-    # Relation a Páginas Online — só adiciona se Claude identificou uma página relevante
+    # Relation a Páginas Online — usa a propriedade já existente "🌐 Páginas Online (1)"
     if p.get("pagina_id_relevante"):
-        properties["🌐 Página Online"] = {
+        properties["🌐 Páginas Online (1)"] = {
             "relation": [{"id": p["pagina_id_relevante"]}]
         }
 
