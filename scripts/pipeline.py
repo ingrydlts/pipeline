@@ -149,24 +149,30 @@ def garantir_propriedades_saida():
         notion.databases.update(
             database_id=DATABASE_SAIDA,
             properties={
-                # ── Propriedades base (existentes ou recriadas) ──────────────
+                # ── Classificação editorial (podem não existir na DB nova) ────
+                "Formato":    {"select": {}},
+                "KPI":        {"select": {}},
+                "Urgência":   {"select": {}},
+                "Categoria":  {"select": {}},
+                "Persona":    {"multi_select": {}},
+                "Status":     {"select": {}},
+                # ── Conteúdo estruturado ─────────────────────────────────────
                 "Gancho":                {"rich_text": {}},
+                "Descricao":             {"rich_text": {}},
                 "Instrução de Produção": {"rich_text": {}},
                 "Fonte":                 {"rich_text": {}},
                 "Fonte URL":             {"url": {}},
                 "Score Conversão":       {"number": {}},
                 "Palavras-chave":        {"rich_text": {}},
-                "Descricao":             {"rich_text": {}},
                 # ── CTA & newsletter ─────────────────────────────────────────
-                "CTA Tipo":              {"select": {}},
-                "CTA Copy":              {"rich_text": {}},
-                "Ângulo Newsletter":     {"rich_text": {}},
+                "CTA Tipo":          {"select": {}},
+                "CTA Copy":          {"rich_text": {}},
+                "Ângulo Newsletter": {"rich_text": {}},
                 # ── Produto e landing page ────────────────────────────────────
-                "Produto Sugerido":      {"rich_text": {}},
-                "Landing Page URL":      {"url": {}},
-                # Nota: "🌐 Páginas Online (1)" já existe como relation nativa desta base.
-                # Não recriamos — apenas usamos na escrita de páginas.
-                # ── Pilar editorial e tom de voz (espelham INSTA TO POR DENTRO) ──
+                "Produto Sugerido": {"rich_text": {}},
+                "Landing Page URL": {"url": {}},
+                # Nota: "🌐 Páginas Online (1)" já existe como relation nativa.
+                # ── Pilar editorial e tom de voz ─────────────────────────────
                 "Pilar":      {"select": {}},
                 "Voice Tone": {"select": {}},
             }
@@ -331,36 +337,30 @@ def escrever_no_notion(p: dict):
         "Name": {
             "title": [{"text": {"content": p["title"]}}]
         },
-        "Gancho": {
-            "rich_text": [{"text": {"content": p.get("hook", "")}}]
-        },
-        "Descricao": {
-            "rich_text": [{"text": {"content": p.get("desc", "")}}]
-        },
-        "Instrução de Produção": {
-            "rich_text": [{"text": {"content": p.get("formatDetail", "")}}]
-        },
-        "Formato":           {"select":       {"name": p["format"]}},
-        "KPI":               {"select":       {"name": p["kpi"]}},
-        "Urgência":          {"select":       {"name": urgencia_val}},
-        "Categoria":         {"select":       {"name": p["categoria"]}},
-        "Persona":           {"multi_select": [{"name": n} for n in p["personas"]]},
-        "Fonte":             {"rich_text":    [{"text": {"content": p.get("fonte", "")}}]},
-        "Fonte URL":         {"url": p["fonteUrl"] or None},
-        "Score Conversão":   {"number": p["score"]},
-        "Palavras-chave":    {"rich_text":    [{"text": {"content": p.get("palavras_chave", "")}}]},
+        "Gancho":                {"rich_text": [{"text": {"content": p.get("hook") or ""}}]},
+        "Descricao":             {"rich_text": [{"text": {"content": p.get("desc") or ""}}]},
+        "Instrução de Produção": {"rich_text": [{"text": {"content": p.get("formatDetail") or ""}}]},
+        "Formato":               {"select":    {"name": p["format"]}},
+        "KPI":                   {"select":    {"name": p["kpi"]}},
+        "Urgência":              {"select":    {"name": urgencia_val}},
+        "Categoria":             {"select":    {"name": p["categoria"]}},
+        "Persona":               {"multi_select": [{"name": n} for n in p["personas"]]},
+        "Fonte":                 {"rich_text": [{"text": {"content": p.get("fonte") or ""}}]},
+        "Fonte URL":             {"url": p["fonteUrl"] or None},
+        "Score Conversão":       {"number": p["score"]},
+        "Palavras-chave":        {"rich_text": [{"text": {"content": p.get("palavras_chave") or ""}}]},
         # CTA
-        "CTA Tipo":          {"select":       {"name": p["cta_tipo"]}},
-        "CTA Copy":          {"rich_text":    [{"text": {"content": p.get("cta_copy", "")}}]},
-        "Ângulo Newsletter": {"rich_text":    [{"text": {"content": p.get("angulo_newsletter", "")}}]},
+        "CTA Tipo":          {"select":    {"name": p["cta_tipo"]}},
+        "CTA Copy":          {"rich_text": [{"text": {"content": p.get("cta_copy") or ""}}]},
+        "Ângulo Newsletter": {"rich_text": [{"text": {"content": p.get("angulo_newsletter") or ""}}]},
         # Produto / landing page
-        "Produto Sugerido":  {"rich_text":    [{"text": {"content": p.get("produto_sugerido", "")}}]},
+        "Produto Sugerido":  {"rich_text": [{"text": {"content": p.get("produto_sugerido") or ""}}]},
         "Landing Page URL":  {"url": p.get("pagina_url_relevante") or None},
         # Pilar e voice tone
-        "Pilar":             {"select":       {"name": p["pilar"]}},
-        "Voice Tone":        {"select":       {"name": p["voice_tone"]}},
+        "Pilar":      {"select": {"name": p["pilar"]}},
+        "Voice Tone": {"select": {"name": p["voice_tone"]}},
         # Status
-        "Status":            {"select":       {"name": "Pronta"}},
+        "Status":     {"select": {"name": "Pronta"}},
     }
 
     # Relation a Páginas Online — usa a propriedade já existente "🌐 Páginas Online (1)"
