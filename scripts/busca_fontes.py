@@ -36,6 +36,8 @@ DOMINIOS_VALIDADOS = [
     # Integração e direitos
     "ciup.fr", "lacimade.org", "singafrance.com", "gisti.org",
     "qualitefle.fr", "fle.fr",
+    # Guias e aides sociais para estrangeiros
+    "studyinfrance.org", "mes-allocs.fr", "solinum.org",
     # Finanças
     "boursedirect.fr", "boursobank.com", "cafedelabourse.com", "bcb.gov.br",
     "lesechos.fr",
