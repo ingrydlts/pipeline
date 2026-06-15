@@ -20,7 +20,7 @@ notion = Client(auth=os.environ["NOTION_TOKEN"])
 DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 
 # ─── Parâmetros globais ───────────────────────────────────────────────────────
-JANELA_DIAS          = 8
+JANELA_DIAS          = 30   # janela ampla — dedup no Notion evita duplicatas
 MINIMO_POR_CATEGORIA = 5
 
 # ─── Whitelist de domínios confiáveis ────────────────────────────────────────
@@ -738,6 +738,36 @@ def gerar_template_editorial(fonte: dict) -> str:
     return "\n".join(checklist)
 
 
+def extrair_publisher(entry) -> str:
+    """Domínio do publicador real (não o redirect Google News)."""
+    dominio = extrair_dominio_para_whitelist(entry)
+    return dominio or "desconhecido"
+
+
+def extrair_data_publicacao(entry) -> str | None:
+    """Data de publicação em formato ISO 8601 (YYYY-MM-DD) para propriedade Date do Notion."""
+    published = entry.get('published_parsed') or entry.get('updated_parsed')
+    if not published:
+        return None
+    try:
+        dt = datetime(*published[:6], tzinfo=timezone.utc)
+        return dt.strftime('%Y-%m-%d')
+    except Exception:
+        return None
+
+
+def extrair_palavras_chave(titulo: str, descricao: str, fonte: dict) -> str:
+    """
+    Registra quais termos déclencharam a captura — útil para filtros editoriais.
+    Combina termos do nicho migratório + keywords da fonte que aparecem no texto.
+    """
+    texto = (titulo + ' ' + descricao).lower()
+    nicho   = [t for t in FILTRO_NICHO_MIGRATORIO if t in texto][:4]
+    kws     = [kw for kw in fonte.get("keywords", []) if kw.lower() in texto][:3]
+    todos   = list(dict.fromkeys(nicho + kws))
+    return ", ".join(todos[:6])
+
+
 # ─── Notion ───────────────────────────────────────────────────────────────────
 
 def garantir_propriedades_notion():
@@ -751,7 +781,9 @@ def garantir_propriedades_notion():
             properties={
                 "Score Conversão":    {"number": {}},
                 "Template Editorial": {"rich_text": {}},
-                # "Formato" já existe como select — criado manualmente no Notion
+                "Palavras-chave":     {"rich_text": {}},
+                "Publisher":          {"rich_text": {}},
+                # "Formato" e "Data da Notícia" — criados manualmente no Notion (select e date)
             }
         )
     except Exception as e:
@@ -759,12 +791,15 @@ def garantir_propriedades_notion():
 
 
 def criar_rascunho_notion(titulo: str, url: str, descricao: str,
-                           fonte_nome: str, fonte: dict) -> bool:
+                           fonte_nome: str, fonte: dict, entry: dict) -> bool:
     titulo_limpo    = normalizar_texto(titulo)[:200]
     descricao_limpa = normalizar_texto(descricao)[:500]
     score           = fonte.get("score_conversao", 3)
     formato         = _FORMATO_NOTION.get(score, "Carrossel")
     checklist       = gerar_template_editorial(fonte)
+    palavras_chave  = extrair_palavras_chave(titulo, descricao, fonte)
+    publisher       = extrair_publisher(entry)
+    data_pub        = extrair_data_publicacao(entry)
 
     # Normaliza para os valores exatos das opções no Notion (case-sensitive)
     urgencia_val  = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
@@ -781,7 +816,12 @@ def criar_rascunho_notion(titulo: str, url: str, descricao: str,
         "Score Conversão":    {"number": score},
         "Formato":            {"select":        {"name": formato}},
         "Template Editorial": {"rich_text":    [{"text": {"content": checklist}}]},
+        "Palavras-chave":     {"rich_text":    [{"text": {"content": palavras_chave}}]},
+        "Publisher":          {"rich_text":    [{"text": {"content": publisher}}]},
     }
+
+    if data_pub:
+        properties["Data da Notícia"] = {"date": {"start": data_pub}}
 
     try:
         notion.pages.create(parent={"database_id": DATABASE_ENTRADA}, properties=properties)
@@ -805,11 +845,20 @@ def processar_fonte_rss(fonte: dict, criados_por_categoria: dict,
             print(f"  ⚠ Feed inacessível: {fonte['url']}")
             return 0
 
-        print(f"  → {len(feed.entries)} artigo(s) no feed")
-        keywords  = [] if relaxar_keywords else fonte["keywords"]
+        # Ordenar do mais recente ao mais antigo
+        def _ts(e):
+            p = e.get('published_parsed') or e.get('updated_parsed')
+            return p if p else (2000, 1, 1, 0, 0, 0, 0, 0, 0)
+
+        entries = sorted(feed.entries, key=_ts, reverse=True)
+        print(f"  → {len(entries)} artigo(s) no feed (ordenados por recência)")
+
+        # Para fontes Google News a query já filtra por tema — keywords seriam redundantes
+        is_google_news = "news.google.com" in fonte["url"]
+        keywords  = [] if (relaxar_keywords or is_google_news) else fonte["keywords"]
         blacklist = fonte.get("keywords_excluir", [])
 
-        for entry in feed.entries:
+        for entry in entries:
             titulo    = entry.get("title", "")
             url       = entry.get("link", "")
             descricao = entry.get("summary", "") or entry.get("description", "")
@@ -830,7 +879,7 @@ def processar_fonte_rss(fonte: dict, criados_por_categoria: dict,
                 print(f"  ↩ Duplicado: {titulo[:60]}")
                 continue
 
-            ok = criar_rascunho_notion(titulo, url, descricao, fonte["nome"], fonte)
+            ok = criar_rascunho_notion(titulo, url, descricao, fonte["nome"], fonte, entry)
             if ok:
                 criados += 1
                 criados_por_categoria[cat] = criados_por_categoria.get(cat, 0) + 1
