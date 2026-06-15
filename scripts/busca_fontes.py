@@ -407,7 +407,7 @@ IMPORTANTE: Retorne APENAS o JSON array. Sem markdown. Sem texto antes ou depois
     for tentativa in range(1, RETRY_MAX_TENTATIVAS + 1):
         try:
             response = cliente_gemini.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(
                     tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())]
