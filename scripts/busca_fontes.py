@@ -60,13 +60,15 @@ FILTRO_NICHO_MIGRATORIO = [
     "naturalisation", "régularisation", "non-résident",
 ]
 
-# ─── Mapeamento de formato por score de conversão ─────────────────────────────
-FORMATO_POR_SCORE = {
-    5: "🔴 URGENTE — Publicar esta semana. Reel (<60s) com gancho de 3s + Carrossel de salvamento.",
-    4: "🟠 PRIORITÁRIO — Publicar em até 10 dias. Carrossel 6-8 slides OU Reel de 90s.",
-    3: "🟡 PLANEJADO — Próximo ciclo editorial. Carrossel 4-6 slides.",
-    2: "🟢 BANCO DE PAUTAS — Sem urgência. Carrossel evergreen, pode batchar com outros.",
-    1: "⚪ REFERÊNCIA — Não publicar solo. Usar como dado de suporte em outro conteúdo.",
+# ─── Mapeamento de score → Formato (propriedade select no Notion) ─────────────
+# Score 5-4 = conteúdo de timing → Reels  |  Score 3-2 = evergreen → Carrossel
+# Score 1 = referência → Stories (dado de suporte, não post principal)
+_FORMATO_NOTION = {
+    5: "Reels",
+    4: "Reels",
+    3: "Carrossel",
+    2: "Carrossel",
+    1: "Stories",
 }
 
 # ─── Checklist editorial por categoria ───────────────────────────────────────
@@ -730,42 +732,18 @@ def url_ja_existe_no_notion(url: str) -> bool:
         return False
 
 
-def gerar_template_editorial(titulo: str, descricao: str, fonte: dict) -> str:
-    """
-    Gera um template editorial em Python nativo — zero custo de API.
-    Combina metadados da fonte com os dados brutos da notícia.
-    """
-    cat       = fonte["categoria"]
-    score     = fonte.get("score_conversao", 3)
-    personas  = " | ".join(fonte["personas"])
-    urgencia  = fonte.get("urgencia", "media").upper()
-    formato   = FORMATO_POR_SCORE.get(score, FORMATO_POR_SCORE[3])
-    checklist = CHECKLIST_POR_CATEGORIA.get(cat, [])
-
-    linhas = [
-        f"📋 TEMPLATE — {cat.upper()} | Score: {score}/5 | Urgência: {urgencia}",
-        f"🎯 Personas: {personas}",
-        f"📌 Formato sugerido: {formato}",
-        "",
-        "✅ CHECKLIST DE CURADORIA:",
-    ]
-    linhas.extend(checklist)
-    linhas.append("")
-    linhas.append(f"📰 Título capturado: {titulo[:120]}")
-
-    desc_curta = (descricao[:200] + "…") if len(descricao) > 200 else descricao
-    if desc_curta:
-        linhas.append(f"📝 Resumo bruto: {desc_curta}")
-
-    return "\n".join(linhas)
+def gerar_template_editorial(fonte: dict) -> str:
+    """Retorna apenas o checklist de curadoria (5 itens) para o campo Template Editorial."""
+    checklist = CHECKLIST_POR_CATEGORIA.get(fonte["categoria"], [])
+    return "\n".join(checklist)
 
 
 # ─── Notion ───────────────────────────────────────────────────────────────────
 
 def garantir_propriedades_notion():
     """
-    Cria automaticamente 'Score Conversão' (Number) e 'Template Editorial' (rich_text)
-    no database Notion, caso ainda não existam. Idempotente.
+    Cria automaticamente as propriedades customizadas no database Notion, caso não existam.
+    Idempotente — seguro rodar sempre.
     """
     try:
         notion.databases.update(
@@ -773,6 +751,7 @@ def garantir_propriedades_notion():
             properties={
                 "Score Conversão":    {"number": {}},
                 "Template Editorial": {"rich_text": {}},
+                # "Formato" já existe como select — criado manualmente no Notion
             }
         )
     except Exception as e:
@@ -781,10 +760,11 @@ def garantir_propriedades_notion():
 
 def criar_rascunho_notion(titulo: str, url: str, descricao: str,
                            fonte_nome: str, fonte: dict) -> bool:
-    titulo_limpo     = normalizar_texto(titulo)[:200]
-    descricao_limpa  = normalizar_texto(descricao)[:500]
-    template         = gerar_template_editorial(titulo_limpo, descricao_limpa, fonte)
-    score            = fonte.get("score_conversao", 3)
+    titulo_limpo    = normalizar_texto(titulo)[:200]
+    descricao_limpa = normalizar_texto(descricao)[:500]
+    score           = fonte.get("score_conversao", 3)
+    formato         = _FORMATO_NOTION.get(score, "Carrossel")
+    checklist       = gerar_template_editorial(fonte)
 
     # Normaliza para os valores exatos das opções no Notion (case-sensitive)
     urgencia_val  = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
@@ -799,7 +779,8 @@ def criar_rascunho_notion(titulo: str, url: str, descricao: str,
         "Notas":              {"rich_text":    [{"text": {"content": descricao_limpa}}]},
         "Status":             {"select":        {"name": "Rascunho"}},
         "Score Conversão":    {"number": score},
-        "Template Editorial": {"rich_text":    [{"text": {"content": template[:1990]}}]},
+        "Formato":            {"select":        {"name": formato}},
+        "Template Editorial": {"rich_text":    [{"text": {"content": checklist}}]},
     }
 
     try:
