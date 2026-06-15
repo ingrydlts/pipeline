@@ -25,8 +25,8 @@ import anthropic
 notion = Client(auth=os.environ["NOTION_TOKEN"])
 claude  = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-DATABASE_ENTRADA     = os.environ["NOTION_DATABASE_ID"]
-DATABASE_SAIDA       = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"]
+DATABASE_ENTRADA     = os.environ["NOTION_DATABASE_ID"].strip()
+DATABASE_SAIDA       = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"].strip()
 PAGINAS_ONLINE_DB_ID = "f16d6022-54ce-8325-a778-87c5e078b5b5"   # Páginas Online (landing pages)
 
 # ─── Contextos editoriais (carregados de arquivo — não negociável para qualidade autônoma) ──
@@ -281,7 +281,13 @@ Retorne APENAS JSON válido:
 
     raw = msg.content[0].text.strip()
     raw = re.sub(r'^```json\s*|^```|\s*```$', '', raw, flags=re.MULTILINE).strip()
-    result = json.loads(raw)
+    # Localiza o início do objeto JSON (ignora texto de prefácio)
+    start = raw.find('{')
+    if start > 0:
+        raw = raw[start:]
+    # raw_decode para no fim do primeiro objeto JSON — ignora texto extra após o JSON
+    decoder = json.JSONDecoder()
+    result, _ = decoder.raw_decode(raw)
 
     # ── Enriquecer com metadados da pauta ────────────────────────────────────
     result["fonteUrl"]      = pauta["fonte_url"]
@@ -386,16 +392,33 @@ def main():
     print("   Verificando propriedades dos bancos...")
     garantir_propriedades_entrada()
 
-    # ── Verificação antecipada do banco de saída ──────────────────────────────
+    # ── Verificação antecipada do banco de saída (testa READ + WRITE) ────────
     # Testa acesso ANTES de chamar Claude, para não desperdiçar tokens.
+    print(f"  ℹ DATABASE_SAIDA ID: {DATABASE_SAIDA[:8]}...{DATABASE_SAIDA[-4:]} ({len(DATABASE_SAIDA)} chars)")
     try:
         notion.databases.retrieve(database_id=DATABASE_SAIDA)
-        print("  ✓ Banco de saída: acessível.")
+        print("  ✓ Banco de saída: leitura OK.")
     except Exception as e:
-        print(f"\n🚨 ERRO CRÍTICO: Banco de saída inacessível — {e}")
-        print("   → Compartilhe a base 'Pautas Prontas por dentro' com a integração Notion.")
-        print("   → No Notion: abra a base → ••• → Connections → adicione 'por-dentro-pipeline'.")
-        print("   Encerrando sem chamar Claude para não desperdiçar tokens.\n")
+        print(f"\n🚨 ERRO CRÍTICO: Banco de saída inacessível para leitura — {e}")
+        print("   → Compartilhe 'Pautas Prontas por dentro' com a integração 'por-dentro-pipeline'.")
+        print("   → No Notion: abra a base → ••• → Connections → adicione a integração.")
+        print("   Encerrando sem chamar Claude.\n")
+        return
+
+    # Testa ESCRITA criando uma página temporária e arquivando imediatamente
+    try:
+        _test = notion.pages.create(
+            parent={"database_id": DATABASE_SAIDA},
+            properties={"Name": {"title": [{"text": {"content": "_PIPELINE_WRITE_TEST_"}}]}}
+        )
+        notion.pages.update(page_id=_test["id"], archived=True)
+        print("  ✓ Banco de saída: escrita confirmada.")
+    except Exception as e:
+        print(f"\n🚨 ERRO CRÍTICO: Sem permissão de escrita no banco de saída — {e}")
+        print("   → A integração 'por-dentro-pipeline' precisa de permissão INSERT.")
+        print("   → Verifique em notion.so/profile/integrations → Capabilities → Insert content.")
+        print("   → Ou reconecte a integração no Notion: ••• → Connections → por-dentro-pipeline.")
+        print("   Encerrando sem chamar Claude.\n")
         return
 
     garantir_propriedades_saida()
