@@ -6,7 +6,7 @@ Zero RSS. Zero listas de domínio. Zero filtros de keyword frágeis.
 O Gemini pesquisa o Google em tempo real e retorna os artigos mais relevantes.
 
 Roda toda sexta-feira às 7h UTC (via GitHub Actions).
-Custo: Gemini free tier (15 RPM) + Notion API (gratuito).
+Resiliência: retry com exponential backoff em erros 429/503.
 """
 
 import os
@@ -14,8 +14,10 @@ import re
 import json
 import time
 from datetime import datetime, timezone
+
 from google import genai
 from google.genai import types as genai_types
+from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
 from notion_client import Client
 
 # ─── Clientes ─────────────────────────────────────────────────────────────────
@@ -26,11 +28,15 @@ DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 # ─── Parâmetros globais ───────────────────────────────────────────────────────
 MINIMO_POR_CATEGORIA  = 5
 MAX_ARTIGOS_POR_FONTE = 8
-SLEEP_ENTRE_CHAMADAS  = 5   # segundos entre chamadas Gemini (respeita 15 RPM free tier)
+
+# Tempo de pausa obrigatório entre temas (5s = ~12 RPM, folga saudável abaixo de 15 RPM)
+SLEEP_ENTRE_TEMAS     = 5
+
+# Configuração de retry para erros 429 / 503
+RETRY_MAX_TENTATIVAS  = 3
+RETRY_BASE_SLEEP      = 10   # segundos na primeira falha; dobra a cada tentativa
 
 # ─── Filtro de nicho migratório — última linha de defesa de relevância ─────────
-# O Gemini já filtra por contexto, mas este filtro garante que o artigo
-# mencione explicitamente o público-alvo no título ou resumo.
 FILTRO_NICHO_MIGRATORIO = [
     # Francês
     "étranger", "étrangère", "étrangers", "immigré", "immigrée",
@@ -43,8 +49,8 @@ FILTRO_NICHO_MIGRATORIO = [
 ]
 
 # ─── Mapeamento de valores Notion (case-sensitive) ────────────────────────────
-_FORMATO_NOTION  = {5: "Reels", 4: "Reels", 3: "Carrossel", 2: "Carrossel", 1: "Stories"}
-_URGENCIA_NOTION = {"alta": "Alta", "media": "media", "baixa": "Baixa"}
+_FORMATO_NOTION   = {5: "Reels", 4: "Reels", 3: "Carrossel", 2: "Carrossel", 1: "Stories"}
+_URGENCIA_NOTION  = {"alta": "Alta", "media": "media", "baixa": "Baixa"}
 _CATEGORIA_NOTION = {"burocratica": "Burocratica", "civica": "Civica"}
 
 # ─── Checklist editorial por categoria ────────────────────────────────────────
@@ -87,9 +93,6 @@ CHECKLIST_POR_CATEGORIA = {
 }
 
 # ─── FONTES DE PESQUISA ────────────────────────────────────────────────────────
-# Substituem FONTES_RSS: em vez de URL de feed, são queries em FR + PT.
-# O Gemini pesquisa o Google em tempo real com Google Search grounding.
-
 FONTES_GEMINI = [
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -332,7 +335,6 @@ def normalizar_texto(texto: str) -> str:
 
 
 def contem_nicho_migratorio(titulo: str, resumo: str) -> bool:
-    """Garante que o artigo mencione explicitamente o público-alvo."""
     texto = (titulo + ' ' + resumo).lower()
     return any(termo in texto for termo in FILTRO_NICHO_MIGRATORIO)
 
@@ -366,11 +368,12 @@ def gerar_template_editorial(fonte: dict) -> str:
     return "\n".join(checklist)
 
 
-# ─── Gemini Search ────────────────────────────────────────────────────────────
+# ─── Gemini Search com Retry + Exponential Backoff ───────────────────────────
 
 def buscar_artigos_gemini(fonte: dict) -> list[dict]:
     """
     Chama Gemini 2.0 Flash com Google Search grounding.
+    Implementa retry com exponential backoff para erros 429 e 503.
     Retorna lista de artigos: {titulo, url, resumo, data_publicacao, publisher}
     """
     excluir_str = ", ".join(fonte.get("excluir", []))
@@ -399,24 +402,55 @@ Retorne um JSON array com até {MAX_ARTIGOS_POR_FONTE} artigos encontrados:
 
 IMPORTANTE: Retorne APENAS o JSON array. Sem markdown. Sem texto antes ou depois."""
 
-    try:
-        response = cliente_gemini.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())]
+    sleep_atual = RETRY_BASE_SLEEP
+
+    for tentativa in range(1, RETRY_MAX_TENTATIVAS + 1):
+        try:
+            response = cliente_gemini.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())]
+                )
             )
-        )
-        raw = response.text.strip()
-        raw = re.sub(r'^```json\s*|^```|\s*```$', '', raw, flags=re.MULTILINE).strip()
-        artigos = json.loads(raw)
-        return artigos if isinstance(artigos, list) else []
-    except json.JSONDecodeError as e:
-        print(f"  ✗ JSON inválido do Gemini: {e}")
-        return []
-    except Exception as e:
-        print(f"  ✗ Erro na chamada Gemini: {e}")
-        return []
+            raw = response.text.strip()
+            raw = re.sub(r'^```json\s*|^```|\s*```$', '', raw, flags=re.MULTILINE).strip()
+            artigos = json.loads(raw)
+            return artigos if isinstance(artigos, list) else []
+
+        except (ResourceExhausted,) as e:
+            # Erro 429 — cota da API atingida
+            if tentativa < RETRY_MAX_TENTATIVAS:
+                print(f"  ⚠ Cota atingida (429). Tentativa {tentativa}/{RETRY_MAX_TENTATIVAS}. "
+                      f"Aguardando {sleep_atual}s antes de tentar novamente...")
+                time.sleep(sleep_atual)
+                sleep_atual *= 2   # exponential backoff: 10s → 20s → 40s
+            else:
+                print(f"  ✗ Cota atingida após {RETRY_MAX_TENTATIVAS} tentativas. Pulando tema.")
+                return []
+
+        except (ServiceUnavailable,) as e:
+            # Erro 503 — serviço indisponível
+            if tentativa < RETRY_MAX_TENTATIVAS:
+                print(f"  ⚠ Serviço indisponível (503). Tentativa {tentativa}/{RETRY_MAX_TENTATIVAS}. "
+                      f"Aguardando {sleep_atual}s antes de tentar novamente...")
+                time.sleep(sleep_atual)
+                sleep_atual *= 2
+            else:
+                print(f"  ✗ Serviço indisponível após {RETRY_MAX_TENTATIVAS} tentativas. Pulando tema.")
+                return []
+
+        except json.JSONDecodeError as e:
+            # Resposta malformada — não faz retry (é erro de parse, não de quota)
+            print(f"  ✗ JSON inválido do Gemini: {e}")
+            return []
+
+        except Exception as e:
+            # Outros erros inesperados — não faz retry
+            print(f"  ✗ Erro inesperado na chamada Gemini: {type(e).__name__}: {e}")
+            return []
+
+    return []
 
 
 # ─── Notion ───────────────────────────────────────────────────────────────────
@@ -432,7 +466,6 @@ def garantir_propriedades_notion():
                 "Palavras-chave":     {"rich_text": {}},
                 "Publisher":          {"rich_text": {}},
                 "Data da Notícia":    {"date": {}},
-                # "Formato" e "Enviar para Claude" — criados manualmente no Notion
             }
         )
     except Exception as e:
@@ -440,17 +473,17 @@ def garantir_propriedades_notion():
 
 
 def criar_rascunho_notion(artigo: dict, fonte: dict) -> bool:
-    titulo   = normalizar_texto(artigo.get("titulo", ""))[:200]
-    resumo   = normalizar_texto(artigo.get("resumo", ""))[:500]
-    url      = artigo.get("url", "")
+    titulo    = normalizar_texto(artigo.get("titulo", ""))[:200]
+    resumo    = normalizar_texto(artigo.get("resumo", ""))[:500]
+    url       = artigo.get("url", "")
     publisher = normalizar_texto(artigo.get("publisher", ""))[:100]
     data_pub  = artigo.get("data_publicacao")
 
-    score         = fonte.get("score_conversao", 3)
-    formato       = _FORMATO_NOTION.get(score, "Carrossel")
-    urgencia_val  = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
-    categoria_val = _CATEGORIA_NOTION.get(fonte["categoria"], fonte["categoria"])
-    checklist     = gerar_template_editorial(fonte)
+    score          = fonte.get("score_conversao", 3)
+    formato        = _FORMATO_NOTION.get(score, "Carrossel")
+    urgencia_val   = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
+    categoria_val  = _CATEGORIA_NOTION.get(fonte["categoria"], fonte["categoria"])
+    checklist      = gerar_template_editorial(fonte)
     palavras_chave = extrair_palavras_chave(titulo, resumo)
 
     properties = {
@@ -492,7 +525,7 @@ def processar_fonte(fonte: dict, criados_por_categoria: dict,
     excluir = fonte.get("excluir", [])
 
     artigos = buscar_artigos_gemini(fonte)
-    print(f"  → {len(artigos)} artigo(s) encontrado(s) pelo Gemini")
+    print(f"  → {len(artigos)} artigo(s) retornado(s) pelo Gemini")
 
     for artigo in artigos:
         titulo = artigo.get("titulo", "")
@@ -517,7 +550,8 @@ def processar_fonte(fonte: dict, criados_por_categoria: dict,
             criados += 1
             urls_sessao.add(url)
             criados_por_categoria[cat] = criados_por_categoria.get(cat, 0) + 1
-            print(f"  ✓ [score {fonte['score_conversao']}] [{cat}: {criados_por_categoria[cat]}] {titulo[:60]}")
+            print(f"  ✓ [score {fonte['score_conversao']}] [{cat}: {criados_por_categoria[cat]}] "
+                  f"{titulo[:60]}")
 
     return criados
 
@@ -526,29 +560,33 @@ def processar_fonte(fonte: dict, criados_por_categoria: dict,
 
 def main():
     data_hoje = datetime.now().strftime('%d/%m/%Y')
+    total_temas = len(FONTES_GEMINI)
     print(f"\n🔍 CAMADA 1 — Por Dentro ({data_hoje})")
-    print(f"   {len(FONTES_GEMINI)} temas | Gemini 2.0 Flash + Google Search grounding")
+    print(f"   {total_temas} temas | Gemini 2.0 Flash + Google Search grounding")
+    print(f"   Pausa entre temas: {SLEEP_ENTRE_TEMAS}s | "
+          f"Retry em 429/503: até {RETRY_MAX_TENTATIVAS}x (backoff {RETRY_BASE_SLEEP}s base)")
     print(f"   Mínimo por categoria: {MINIMO_POR_CATEGORIA}\n")
 
     garantir_propriedades_notion()
 
     total_criados         = 0
     criados_por_categoria = {}
-    urls_sessao           = set()   # dedup dentro da mesma execução
+    urls_sessao           = set()
 
     for i, fonte in enumerate(FONTES_GEMINI):
         qtd = processar_fonte(fonte, criados_por_categoria, urls_sessao)
         total_criados += qtd
 
-        # Rate limit: pausa entre chamadas (exceto na última)
-        if i < len(FONTES_GEMINI) - 1:
-            time.sleep(SLEEP_ENTRE_CHAMADAS)
+        # Pausa obrigatória entre temas — mantém uso abaixo de 15 RPM
+        if i < total_temas - 1:
+            print(f"  ⏳ Aguardando {SLEEP_ENTRE_TEMAS}s para respeitar a cota da API...")
+            time.sleep(SLEEP_ENTRE_TEMAS)
 
-    # ── Resumo ────────────────────────────────────────────────────────────────
-    todas_categorias = set(f["categoria"] for f in FONTES_GEMINI)
+    # ── Resumo final ──────────────────────────────────────────────────────────
+    todas_categorias = sorted(set(f["categoria"] for f in FONTES_GEMINI))
     print(f"\n{'═' * 62}")
     print(f"✅ Camada 1 concluída: {total_criados} rascunho(s) criado(s) no Notion")
-    for cat in sorted(todas_categorias):
+    for cat in todas_categorias:
         n    = criados_por_categoria.get(cat, 0)
         flag = "✓" if n >= MINIMO_POR_CATEGORIA else "⚠ abaixo do mínimo"
         print(f"   {flag}  {cat}: {n}")
