@@ -2,7 +2,7 @@ name: Por Dentro — Camada 2 (Estruturação com Claude)
 
 on:
   schedule:
-    # Toda segunda-feira às 06h00 UTC (08h Paris no verão)
+    # Todo sábado às 06h00 UTC (08h Paris no verão)
     - cron: '0 6 * * 1'
   workflow_dispatch:  # permite rodar manualmente
 
