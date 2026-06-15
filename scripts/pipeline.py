@@ -29,10 +29,10 @@ DATABASE_ENTRADA     = os.environ["NOTION_DATABASE_ID"]
 DATABASE_SAIDA       = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"]
 PAGINAS_ONLINE_DB_ID = "f16d6022-54ce-8325-a778-87c5e078b5b5"   # Páginas Online (landing pages)
 
-try:
-    BRAND_CONTEXT = open("scripts/brand_context.txt", encoding="utf-8").read()
-except FileNotFoundError:
-    BRAND_CONTEXT = "Canal Por Dentro — informação técnica sobre vida na França para brasileiras imigrantes. Tom: lúcido, pragmático, elegante. Sem romantismo, sem alarmismo."
+# ─── Contextos editoriais (carregados de arquivo — não negociável para qualidade autônoma) ──
+_script_dir       = os.path.dirname(os.path.abspath(__file__))
+BRAND_CONTEXT     = open(os.path.join(_script_dir, "brand_context.txt"),    encoding="utf-8").read()
+AUDIENCIA_CONTEXT = open(os.path.join(_script_dir, "audiencia_context.txt"), encoding="utf-8").read()
 
 # ─── Valores válidos para seletores Notion ────────────────────────────────────
 _KPI_VALIDOS      = ["Salvamento alto", "Compartilhamento alto", "Comentário alto", "Alcance"]
@@ -237,107 +237,45 @@ def estruturar_com_claude(pauta: dict, catalogo: list[dict]) -> dict:
     formato_sugerido = pauta["formato_sugerido"] or "Carrossel"
     score            = pauta["score_conversao"]
 
-    # ── Formatar catálogo para o prompt ──────────────────────────────────────
+    # ── Catálogo compacto: uma linha por entrada ─────────────────────────────
     if catalogo:
-        linhas = ["CATÁLOGO DE PÁGINAS E PRODUTOS ATIVOS NO NOTION:"]
-        for i, p in enumerate(catalogo, 1):
-            prods = "; ".join(
-                f"{pr['nome']} (status: {pr['status']})" for pr in p["produtos"]
-            ) or "nenhum produto vinculado ainda"
-            linhas.append(
-                f"{i}. URL: {p['pagina_url'] or 'sem URL'}\n"
-                f"   Oferta/Isca: {p['oferta'] or 'N/A'}\n"
-                f"   CTA atual da página: {p['cta'] or 'N/A'}\n"
-                f"   Objetivo: {p['objetivo'] or 'N/A'}\n"
-                f"   Produtos vinculados: {prods}"
-            )
-        catalogo_str = "\n".join(linhas)
+        entradas = []
+        for p in catalogo:
+            prods = " / ".join(pr["nome"] for pr in p["produtos"]) or "sem produto"
+            entradas.append(f'- {p["oferta"] or p["objetivo"]} | produto: {prods} | url: {p["pagina_url"]}')
+        catalogo_str = "PÁGINAS ATIVAS:\n" + "\n".join(entradas)
     else:
-        catalogo_str = "CATÁLOGO DE PÁGINAS E PRODUTOS: nenhuma página ativa encontrada. Use CTA genérico."
+        catalogo_str = "PÁGINAS ATIVAS: nenhuma. Use CTA genérico."
 
-    prompt = f"""Você é o assistente editorial sênior do projeto Por Dentro — canal YouTube e Instagram para brasileiras imigrantes na França.
+    prompt = f"""{BRAND_CONTEXT}
 
-MANUAL DE MARCA:
-{BRAND_CONTEXT}
+{AUDIENCIA_CONTEXT}
 
-──────────────────────────────────────────────
-PAUTA BRUTA PARA ESTRUTURAR:
-- Título do artigo fonte: {pauta['titulo_bruto']}
-- Categoria: {pauta['categoria']}
-- Personas-alvo: {personas_str}
-- Urgência: {pauta['urgencia']}
-- Score de conversão (1-5): {score}
-- Formato já sugerido pela Camada 1: {formato_sugerido}
-- Publisher da fonte: {pauta['publisher']}
-- Palavras-chave identificadas: {pauta['palavras_chave']}
-- Resumo da fonte: {pauta['notas']}
-- URL da fonte: {pauta['fonte_url']}
+---
+PAUTA PARA ESTRUTURAR:
+título: {pauta['titulo_bruto']}
+categoria: {pauta['categoria']} | personas: {personas_str} | urgência: {pauta['urgencia']} | score: {score}
+formato: {formato_sugerido} | publisher: {pauta['publisher']}
+keywords: {pauta['palavras_chave']}
+resumo: {pauta['notas'][:300]}
 
-──────────────────────────────────────────────
 {catalogo_str}
 
-──────────────────────────────────────────────
-REGRAS PARA DECIDIR O CTA:
+REGRAS CTA:
+• Comentário+Automação → burocrática/jurídica, urgência alta, score≥4. Copy: "💬 Comenta '[PALAVRA]' que te mando [PRODUTO/OFERTA do catálogo]". Use a página ativa mais relevante.
+• Newsletter → analítico/finanças/jurídico profundo, P03/P04, score 3-4. Copy: "📩 Assina a newsletter — link na bio."
+• Ambos → tem as duas camadas. Dois CTAs separados por \\n\\n.
+• Orgânico → cívico, score≤2. Copy: "Você já passou por isso? Conta nos comentários 👇"
 
-"Comentário+Automação" → tema burocrático ou jurídico, urgência alta, score ≥ 4.
-  A pessoa quer resolver uma dor agora. O CTA pede um comentário com palavra-chave
-  que dispara uma automação no Instagram (ManyChat) levando à landing page.
-  IMPORTANTE: olhe o catálogo acima e use o nome real do produto/oferta na copy.
-  Se não houver produto relevante, use placeholder genérico [RECURSO].
-  CTA Copy modelo: "💬 Comenta 'PALAVRA' aqui embaixo que te mando [NOME DO PRODUTO/OFERTA]."
-  ↳ Escolha PALAVRA-CHAVE curta relacionada ao tema (ex: ANEF, CAF, CARTEVITALE).
-  ↳ pagina_url_relevante: URL da página do catálogo mais relevante (ou vazio).
+PILAR: Sistema(burocracia/dinheiro) | Trajetória(carreira/estudos) | Identidade(pertencimento/cultura) | Sociedade(política/direitos)
+VOICE TONE: Observador | Explicativo | Sentimental | Humor
 
-"Newsletter" → tema analítico (finanças, acadêmico, jurídico profundo), personas P03/P04,
-  score 3-4. O tema exige profundidade que o Instagram não comporta.
-  CTA Copy modelo: "📩 Assina a newsletter — link na bio — para receber a análise completa."
-  ↳ pagina_url_relevante: vazio (a newsletter não tem landing page de produto direto).
-
-"Ambos" → tema tem utilidade imediata E profundidade. Escreva os dois CTAs separados
-  por \\n\\n no campo cta_copy. Use produto real do catálogo para o CTA de comentário.
-
-"Orgânico" → tema cívico ou de comunidade, score ≤ 2. Sem CTA de conversão.
-  CTA Copy modelo: "Você já passou por isso? Conta nos comentários 👇"
-  ↳ pagina_url_relevante: vazio.
-
-ÂNGULO NEWSLETTER → só preencher se cta_tipo for "Newsletter" ou "Ambos".
-  Descreva em 1 frase o ângulo exclusivo que a newsletter vai aprofundar.
-
-PILAR EDITORIAL (escolha 1 apenas):
-  "Sistema"    → conteúdo sobre burocracia, leis, processos, dinheiro
-  "Trajetória" → conteúdo sobre carreira, estudos, evolução pessoal na França
-  "Identidade" → conteúdo sobre pertencimento, cultura, ser brasileira na França
-  "Sociedade"  → conteúdo sobre política, direitos, contexto social
-
-VOICE TONE (escolha 1 apenas):
-  "Observador"  → análise distanciada, dados, comparação
-  "Explicativo" → passo a passo, tutorial, guia prático
-  "Sentimental" → vivência, emoção, identificação
-  "Humor"       → leveza, ironia gentil, descontração
-
-──────────────────────────────────────────────
-Retorne APENAS um JSON válido. Sem markdown. Sem texto antes ou depois:
-{{
-  "title":                "título editorial finalizado — direto, sem clickbait",
-  "hook":                 "gancho de 1 frase que para o scroll — tensão cognitiva real",
-  "desc":                 "descrição em 2 frases, tom de conversa entre amigas",
-  "kpi":                  "Salvamento alto | Compartilhamento alto | Comentário alto | Alcance",
-  "format":               "{formato_sugerido}",
-  "formatDetail":         "instrução de produção em 1 linha (nº de slides, ritmo, texto-chave)",
-  "fonte":                "nome curto do publisher",
-  "urgency":              "Alta | media | Baixa",
-  "cta_tipo":             "Comentário+Automação | Newsletter | Ambos | Orgânico",
-  "cta_copy":             "texto exato do CTA (se Ambos: dois CTAs separados por \\n\\n)",
-  "angulo_newsletter":    "frase descrevendo o ângulo da newsletter (vazio se Orgânico)",
-  "pilar":                "Sistema | Trajetória | Identidade | Sociedade",
-  "voice_tone":           "Observador | Explicativo | Sentimental | Humor",
-  "produto_sugerido":     "nome do produto ou oferta a mencionar no CTA (vazio se não aplicável)",
-  "pagina_url_relevante": "URL da landing page relevante do catálogo (vazio se não aplicável)"
-}}"""
+Retorne APENAS JSON válido:
+{{"title":"","hook":"","desc":"","kpi":"Salvamento alto|Compartilhamento alto|Comentário alto|Alcance","format":"{formato_sugerido}","formatDetail":"","fonte":"","urgency":"Alta|media|Baixa","cta_tipo":"Comentário+Automação|Newsletter|Ambos|Orgânico","cta_copy":"","angulo_newsletter":"","pilar":"","voice_tone":"","produto_sugerido":"","pagina_url_relevante":""}}"""
 
     msg = claude.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1200,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=800,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -447,6 +385,19 @@ def main():
     print("\n🤖 CAMADA 2 — Por Dentro Pipeline")
     print("   Verificando propriedades dos bancos...")
     garantir_propriedades_entrada()
+
+    # ── Verificação antecipada do banco de saída ──────────────────────────────
+    # Testa acesso ANTES de chamar Claude, para não desperdiçar tokens.
+    try:
+        notion.databases.retrieve(database_id=DATABASE_SAIDA)
+        print("  ✓ Banco de saída: acessível.")
+    except Exception as e:
+        print(f"\n🚨 ERRO CRÍTICO: Banco de saída inacessível — {e}")
+        print("   → Compartilhe a base 'Pautas Prontas por dentro' com a integração Notion.")
+        print("   → No Notion: abra a base → ••• → Connections → adicione 'por-dentro-pipeline'.")
+        print("   Encerrando sem chamar Claude para não desperdiçar tokens.\n")
+        return
+
     garantir_propriedades_saida()
 
     print("\n📦 Carregando catálogo de produtos e landing pages...")
