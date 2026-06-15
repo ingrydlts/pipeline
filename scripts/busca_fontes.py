@@ -783,7 +783,8 @@ def garantir_propriedades_notion():
                 "Template Editorial": {"rich_text": {}},
                 "Palavras-chave":     {"rich_text": {}},
                 "Publisher":          {"rich_text": {}},
-                # "Formato" e "Data da Notícia" — criados manualmente no Notion (select e date)
+                "Data da Notícia":    {"date": {}},
+                # "Formato" — criado manualmente no Notion como select
             }
         )
     except Exception as e:
