@@ -21,6 +21,19 @@ DATABASE_SAIDA   = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"]
 BRAND_CONTEXT    = open("scripts/brand_context.txt", encoding="utf-8").read()
 
 
+# ─── Garantir propriedades necessárias no database de entrada ─────────────────
+def garantir_propriedades_pipeline():
+    """Cria 'Enviar para Claude' (checkbox) se ainda não existir. Idempotente."""
+    try:
+        notion.databases.update(
+            database_id=DATABASE_ENTRADA,
+            properties={"Enviar para Claude": {"checkbox": {}}}
+        )
+        print("  ✓ Propriedade 'Enviar para Claude' verificada.")
+    except Exception as e:
+        print(f"  ⚠ Não foi possível verificar propriedades: {e}")
+
+
 # ─── FUNÇÃO 1: Buscar rascunhos com checkbox "Enviar para Claude" marcado ─────
 def buscar_para_processar():
     response = notion.databases.query(
@@ -132,7 +145,7 @@ def escrever_no_notion(p):
             "Persona":   {"multi_select": [{"name": n} for n in p["personas"]]},
             "Fonte":     {"rich_text":    [{"text": {"content": p["fonte"]}}]},
             "Fonte URL": {"url": p["fonteUrl"] or None},
-            "Status":    {"select":       {"name": "pronta"}},
+            "Status":    {"select":       {"name": "Publicado"}},
         }
     )
 
@@ -143,7 +156,7 @@ def marcar_processado(page_id):
         page_id=page_id,
         properties={
             "Enviar para Claude": {"checkbox": False},
-            "Status":             {"select": {"name": "processado"}},
+            "Status":             {"select": {"name": "Processado"}},
         }
     )
 
@@ -151,6 +164,7 @@ def marcar_processado(page_id):
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 def main():
     print("\n🔍 CAMADA 2 — Buscando rascunhos marcados para processar...")
+    garantir_propriedades_pipeline()
     rascunhos = buscar_para_processar()
 
     if not rascunhos:
