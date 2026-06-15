@@ -1,17 +1,31 @@
 PROJETO: Por Dentro — canal YouTube e Instagram para brasileiras imigrantes na França.
 
-TOM DE VOZ: Conversa inteligente entre amigas. Direta, calorosa, lúcida, sem postura professoral.
-
-PROIBIDO: Romantizar ("Paris é linda", "é um sonho"). Assustar ("é difícil demais", "você não vai conseguir"). Exclamações excessivas. Alarmismo. Julgamento sobre escolhas pessoais.
-
-OBRIGATÓRIO: Frases curtas. Uma ideia por frase. "Você" direto — nunca "os imigrantes". Francês como tempero natural: titre de séjour, bon, voilà, en résumé, récépissé.
-
-PERSONAS:
-- P01 (Sonhadora): ainda no Brasil, pesquisando. Gancho: curiosidade prática. "O que ninguém te conta sobre..."
-- P02 (Recém-chegada): chegou há menos de 18 meses, sobrecarregada. Gancho: alívio + ação imediata. KPI: salvamento.
-- P03 (Adaptada): 2-5 anos na França, quer otimizar. Gancho: análise, dados, estratégia. KPI: compartilhamento.
-- P04 (Crítica/Tech): sênior, quer profundidade. Gancho: dado não-óbvio, análise contraintuitiva.
-
-FÓRMULA DE GANCHO (Slide 1 de carrossel): Tensão cognitiva imediata — afirmação que para o scroll. Ex: "Você tem direito a isso e provavelmente não sabe." ou "Esse documento muda tudo. E quase ninguém pede."
-
-CADA PEÇA DEVE GERAR: identificação imediata + uma ação clara + uma descoberta útil.
+## MISSÃO
+Abrir a caixa preta do sistema francês para brasileiras que vivem ou querem viver na França.
+Informação técnica com voz humana. Não somos guru de imigração nem guia turístico.
+ 
+## TOM DE VOZ
+- Conversa inteligente entre amigas. Direta, calorosa, lúcida, sem postura professoral.
+- Usa "você" direto — nunca distante, nunca condescendente.
+- Termos técnicos franceses em itálico quando aparecem: titre de séjour, récépissé, alternance, CAF, Sécu.
+- Sem exclamações excessivas. Sem alarmismo. Sem julgamento sobre escolhas pessoais (voltar/ficar, casar/não casar).
+- Cada peça entrega: identificação imediata + uma ação clara + uma descoberta útil.
+ 
+## CANAIS E FORMATOS
+- Instagram Carrossel: 6-10 slides, gancho forte no slide 1, passo a passo no meio, CTA no último.
+- Instagram Reels: gancho nos 3 primeiros segundos, informação densa em menos de 60s.
+- Instagram Stories: complemento, bastidores, polls, engajamento leve.
+- YouTube: vídeos educativos 8-15min com estrutura: problema → contexto → solução → ação.
+- Newsletter: análise profunda, dados, perspectiva que não cabe no Instagram.
+ 
+## PILARES EDITORIAIS
+- Sistema → burocracia, leis, plataformas, processos, dinheiro (CAF, ANEF, Sécu, impôts)
+- Trajetória → carreira, estudos, reconhecimento de diplomas, alternance, CPF
+- Identidade → pertencimento, cultura, ser brasileira na França, classe social
+- Sociedade → política migratória, direitos, contexto europeu, associações
+ 
+## O QUE NUNCA FAZEMOS
+- Clickbait ("Você vai se CHOCAR com isso")
+- Conteúdo de autoajuda sem base prática
+- Romantizar a saudade ou a vida na França
+- Dar conselho jurídico ou financeiro específico sem recomendar profissional
