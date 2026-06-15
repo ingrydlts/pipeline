@@ -6,11 +6,6 @@ Zero dependência de IA neste script: 100% Python nativo.
 Custo de API: apenas Notion (incluso no plano gratuito).
 
 Roda toda sexta-feira às 7h UTC (via GitHub Actions).
-
-PRÉ-REQUISITO NOTION:
-Adicione ao database "Rascunhos" as propriedades:
-  - "Score Conversão"   → tipo: Number
-  - "Template Editorial" → tipo: Text (rich_text)
 """
 
 import os
@@ -29,12 +24,11 @@ JANELA_DIAS          = 8
 MINIMO_POR_CATEGORIA = 5
 
 # ─── Whitelist de domínios confiáveis ────────────────────────────────────────
-# Artigos de domínios fora desta lista são descartados automaticamente.
 DOMINIOS_VALIDADOS = [
     # Governo francês
     "service-public.fr", "legifrance.gouv.fr", "interieur.gouv.fr",
     "impots.gouv.fr", "francetravail.fr", "moncompteformation.gouv.fr",
-    "france-education-international.fr", "insee.fr",
+    "france-education-international.fr", "insee.fr", "education.gouv.fr",
     # Seguridade e saúde
     "caf.fr", "ameli.fr", "urssaf.fr",
     # Educação e carreira
@@ -44,6 +38,7 @@ DOMINIOS_VALIDADOS = [
     "qualitefle.fr", "fle.fr",
     # Finanças
     "boursedirect.fr", "boursobank.com", "cafedelabourse.com", "bcb.gov.br",
+    "lesechos.fr",
     # Governo brasileiro
     "gov.br",
     # Grande mídia francesa
@@ -56,7 +51,6 @@ DOMINIOS_VALIDADOS = [
 ]
 
 # ─── Filtro de nicho migratório (contexto cruzado obrigatório) ────────────────
-# O artigo só é aceito se tiver ao menos 1 destes termos no título ou resumo.
 FILTRO_NICHO_MIGRATORIO = [
     "étranger", "étrangère", "étrangers", "immigré", "immigrée",
     "immigration", "séjour", "brésil", "brésilien", "brésilienne",
@@ -112,117 +106,118 @@ CHECKLIST_POR_CATEGORIA = {
     ],
 }
 
+# ─── Mapeamento para os nomes exatos das opções no Notion ────────────────────
+# O Notion é case-sensitive: "Rascunho" ≠ "rascunho"
+_URGENCIA_NOTION  = {"alta": "Alta", "media": "media", "baixa": "Baixa"}
+_CATEGORIA_NOTION = {"burocratica": "Burocratica", "civica": "Civica"}  # outros já batem
+
 # ─── FONTES RSS ───────────────────────────────────────────────────────────────
 # score_conversao: 1-5 baseado no potencial de salvamento/compartilhamento Instagram
 # 5 = publicar esta semana | 1 = banco de referência
+# URLs Google News usam queries curtas (2-4 termos) para garantir retorno de artigos
 
 FONTES_RSS = [
 
     # ═══════════════════════════════════════════════════════════════════════════
     # ACADÊMICA — Estudos, Mercado Corporativo e Carreira
-    # P01 (em pesquisa), P03 (transição para cargos qualificados)
     # ═══════════════════════════════════════════════════════════════════════════
 
     {
-        "nome": "Google News — Attestation Comparabilité ENIC-NARIC Diplôme",
-        "url": "https://news.google.com/rss/search?q=%22attestation+de+comparabilit%C3%A9%22+ENIC-NARIC+dipl%C3%B4me+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Attestation Comparabilité ENIC-NARIC",
+        "url": "https://news.google.com/rss/search?q=attestation+comparabilit%C3%A9+dipl%C3%B4me+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P01", "P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
             "attestation de comparabilité", "ENIC-NARIC", "diplôme étranger",
-            "reconnaissance", "équivalence", "comparabilité", "validation", "VAE",
+            "reconnaissance", "équivalence", "validation", "VAE",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Compte Personnel Formation CPF Droits Salarié",
-        "url": "https://news.google.com/rss/search?q=%22compte+personnel+de+formation+%28CPF%29+droits%22+salar%C3%A9+%C3%A9tranger+certification&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — CPF Formation Étranger",
+        "url": "https://news.google.com/rss/search?q=CPF+formation+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "compte personnel de formation CPF", "CPF",
-            "formation professionnelle", "salarié", "certification", "financement",
+            "compte personnel de formation", "CPF",
+            "formation professionnelle", "certification", "financement",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Recrutement Cadres Paris Marché du Travail",
-        "url": "https://news.google.com/rss/search?q=%22recrutement+cadres+Paris%22+OR+%22march%C3%A9+du+travail+cadres%22+%C3%A9tranger+emploi&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Recrutement Cadres Étranger France",
+        "url": "https://news.google.com/rss/search?q=recrutement+cadres+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "recrutement cadres Paris", "marché du travail cadres",
-            "emploi", "cadres", "étranger", "qualification", "contrat CDI", "APEC",
+            "recrutement cadres", "emploi", "cadres", "étranger",
+            "qualification", "contrat CDI", "APEC",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Création Micro-entreprise URSSAF Étranger",
-        "url": "https://news.google.com/rss/search?q=%22cr%C3%A9ation+micro-entreprise%22+URSSAF+freelance+France+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Micro-entreprise URSSAF Étranger",
+        "url": "https://news.google.com/rss/search?q=micro-entreprise+URSSAF+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "création micro-entreprise URSSAF", "URSSAF", "micro-entreprise",
-            "indépendant", "freelance", "cotisations",
+            "micro-entreprise", "URSSAF", "indépendant", "freelance", "cotisations",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Auto-entrepreneur Étranger Démarches France",
-        "url": "https://news.google.com/rss/search?q=%22auto-entrepreneur+%C3%A9tranger+d%C3%A9marches%22+France+titre+s%C3%A9jour&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Auto-entrepreneur Étranger France",
+        "url": "https://news.google.com/rss/search?q=auto-entrepreneur+%C3%A9tranger+France+s%C3%A9jour&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "auto-entrepreneur étranger démarches", "auto-entrepreneur étranger",
-            "auto-entrepreneur", "étranger", "titre de séjour travail",
+            "auto-entrepreneur", "étranger", "titre de séjour",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Grille de Salaire Cadres France Rémunération",
-        "url": "https://news.google.com/rss/search?q=%22grille+de+salaire+cadres%22+France+r%C3%A9mun%C3%A9ration+statistiques&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Salaire Cadres Étranger France",
+        "url": "https://news.google.com/rss/search?q=salaire+cadres+%C3%A9tranger+France+r%C3%A9mun%C3%A9ration&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P03", "P04"],
         "urgencia": "baixa",
         "score_conversao": 3,
         "keywords": [
-            "grille de salaire cadres France", "rémunération", "salaire cadres",
-            "statistiques", "APEC",
+            "salaire cadres", "rémunération", "étranger", "APEC",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Aide Création Entreprise France Travail ARE",
-        "url": "https://news.google.com/rss/search?q=%22aide+%C3%A0+la+cr%C3%A9ation+d%27entreprise%22+%22France+Travail%22+%C3%A9tranger+ARE&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — France Travail Aide Création Étranger",
+        "url": "https://news.google.com/rss/search?q=%22France+Travail%22+aide+cr%C3%A9ation+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "score_conversao": 2,
         "keywords": [
-            "aide à la création d'entreprise France Travail", "ARE", "ARCE",
-            "étranger", "France Travail",
+            "France Travail", "ARE", "ARCE", "étranger", "création",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Bourses Étudiants Étrangers Campus France Brésil",
-        "url": "https://news.google.com/rss/search?q=%22bourses+d%27%C3%A9tudes+%C3%A9tudiants+%C3%A9trangers%22+France+%22Campus+France%22+br%C3%A9sil&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Bourses Étudiants Étrangers France",
+        "url": "https://news.google.com/rss/search?q=bourses+%C3%A9tudiants+%C3%A9trangers+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "academica",
         "personas": ["P01", "P02"],
         "urgencia": "baixa",
         "score_conversao": 2,
         "keywords": [
-            "bourses d'études étudiants étrangers France", "Campus France",
+            "bourses", "étudiants étrangers", "Campus France",
             "bourse", "master", "étudiant étranger",
         ],
         "keywords_excluir": [],
@@ -236,8 +231,8 @@ FONTES_RSS = [
         "score_conversao": 3,
         "keywords": [
             "alternance", "apprentissage", "étranger", "international",
-            "contrat d'apprentissage", "CFA", "Campus France", "visa étudiant",
-            "auto-entrepreneur", "CPF", "diplôme étranger", "reconnaissance",
+            "Campus France", "visa étudiant", "auto-entrepreneur",
+            "CPF", "diplôme étranger", "reconnaissance",
         ],
         "keywords_excluir": [
             "bac", "terminale", "lycée", "parcoursup", "brevet",
@@ -247,110 +242,106 @@ FONTES_RSS = [
 
     # ═══════════════════════════════════════════════════════════════════════════
     # BUROCRÁTICA — Passos práticos que P02 executa toda semana
-    # Gerador principal de salvamentos no Instagram
     # ═══════════════════════════════════════════════════════════════════════════
 
     {
-        "nome": "Google News — Numéro Sécurité Sociale Définitif Étranger",
-        "url": "https://news.google.com/rss/search?q=%22num%C3%A9ro+de+s%C3%A9curit%C3%A9+sociale+d%C3%A9finitif%22+%C3%A9tranger+France+Ameli+proc%C3%A9dure&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Sécurité Sociale Étranger Ameli",
+        "url": "https://news.google.com/rss/search?q=s%C3%A9curit%C3%A9+sociale+%C3%A9tranger+Ameli+num%C3%A9ro&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "numéro de sécurité sociale définitif", "numéro de sécurité sociale",
-            "étranger", "Ameli", "CLEISS", "sécurité sociale", "provisoire",
+            "sécurité sociale", "étranger", "Ameli", "numéro",
+            "CLEISS", "provisoire", "définitif",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Demande APL CAF Allocation Logement Étranger",
-        "url": "https://news.google.com/rss/search?q=%22demande+APL+CAF%22+allocation+logement+%C3%A9tranger+montant+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — APL CAF Étranger Logement",
+        "url": "https://news.google.com/rss/search?q=APL+CAF+%C3%A9tranger+logement&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "demande APL CAF", "APL", "allocation logement",
-            "CAF", "étranger", "loyer", "montant",
+            "APL", "CAF", "étranger", "logement", "allocation",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Plafond CAF Ressources Barème Allocations",
-        "url": "https://news.google.com/rss/search?q=%22plafond+CAF+ressources%22+allocation+bar%C3%A8me+revenu+%C3%A9ligibilit%C3%A9&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — CAF Ressources Allocation Étranger",
+        "url": "https://news.google.com/rss/search?q=CAF+ressources+allocation+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "plafond CAF ressources", "plafond", "barème",
-            "allocation", "CAF", "revenus", "éligibilité",
+            "CAF", "ressources", "allocation", "étranger", "barème",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Renouvellement Titre de Séjour ANEF Préfecture",
-        "url": "https://news.google.com/rss/search?q=%22renouvellement+titre+de+s%C3%A9jour+ANEF%22+pr%C3%A9fecture+d%C3%A9lai+bug+2026&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Titre Séjour ANEF Renouvellement",
+        "url": "https://news.google.com/rss/search?q=titre+s%C3%A9jour+ANEF+renouvellement+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "renouvellement titre de séjour ANEF", "ANEF", "préfecture",
-            "récépissé", "carte de séjour", "délai", "téléservice",
+            "ANEF", "titre de séjour", "renouvellement", "récépissé",
+            "carte de séjour", "délai",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
     },
     {
-        "nome": "Google News — Carte Vitale Dossier Ameli Étranger",
-        "url": "https://news.google.com/rss/search?q=%22carte+vitale+dossier+ameli%22+OR+%22carte+vitale+%C3%A9tranger%22+remboursement+proc%C3%A9dure&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Carte Vitale Étranger Ameli",
+        "url": "https://news.google.com/rss/search?q=carte+vitale+%C3%A9tranger+Ameli+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "carte vitale dossier Ameli", "carte vitale étranger",
-            "Ameli", "assurance maladie", "remboursement", "mutuelle",
+            "carte vitale", "étranger", "Ameli",
+            "assurance maladie", "remboursement",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Prélèvement à la Source Impôts Salarié Étranger",
-        "url": "https://news.google.com/rss/search?q=%22pr%C3%A9l%C3%A8vement+%C3%A0+la+source%22+imp%C3%B4ts+salari%C3%A9+%C3%A9tranger+taux+France&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Prélèvement Source Non-Résident Étranger",
+        "url": "https://news.google.com/rss/search?q=pr%C3%A9l%C3%A8vement+source+non-r%C3%A9sident+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "prélèvement à la source impôts", "prélèvement à la source",
-            "taux", "salaire net", "non-résident", "étranger",
+            "prélèvement à la source", "non-résident", "étranger", "taux",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Déclaration Impôts Non-Résident France",
-        "url": "https://news.google.com/rss/search?q=%22d%C3%A9claration+d%27imp%C3%B4ts+non-r%C3%A9sident+France%22+%C3%A9tranger+fiscal+impots.gouv&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Non-Résident Impôts France Étranger",
+        "url": "https://news.google.com/rss/search?q=non-r%C3%A9sident+imp%C3%B4ts+France+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 4,
         "keywords": [
-            "déclaration d'impôts non-résident France", "non-résident",
-            "résident fiscal", "impots.gouv", "avis d'imposition", "étranger",
+            "non-résident", "impôts", "étranger", "résident fiscal",
+            "avis d'imposition",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Échange Permis de Conduire Étranger France",
-        "url": "https://news.google.com/rss/search?q=%22%C3%A9change+de+permis+de+conduire+%C3%A9tranger%22+France+proc%C3%A9dure+d%C3%A9lai+Br%C3%A9sil&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Permis Conduire Étranger France Échange",
+        "url": "https://news.google.com/rss/search?q=permis+conduire+%C3%A9tranger+France+%C3%A9change&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "burocratica",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "échange de permis de conduire étranger", "permis de conduire étranger",
-            "procédure", "délai", "Brésil", "préfecture",
+            "permis de conduire", "étranger", "échange",
+            "préfecture",
         ],
         "keywords_excluir": [],
     },
@@ -363,80 +354,78 @@ FONTES_RSS = [
         "score_conversao": 2,
         "keywords": [
             "visa", "residency", "work permit", "expat", "foreigner",
-            "tax declaration", "health insurance", "titre de séjour",
+            "tax", "health insurance", "titre de séjour",
             "carte vitale", "CAF", "housing benefit",
-            "social security", "bank account", "driving licence exchange",
+            "social security", "driving licence",
         ],
         "keywords_excluir": ["refugee", "asylum", "Mediterranean"],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
     # JURÍDICA — Mudanças de vistos e leis
-    # Alto CTR e compartilhamento em alcance frio (P01) e análise profunda (P04)
     # ═══════════════════════════════════════════════════════════════════════════
 
     {
-        "nome": "Google News — Changement de Statut Étudiant à Salarié",
-        "url": "https://news.google.com/rss/search?q=%22changement+de+statut+%C3%A9tudiant+%C3%A0+salari%C3%A9%22+France+proc%C3%A9dure+autorisation+travail&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Changement Statut Étudiant Salarié",
+        "url": "https://news.google.com/rss/search?q=changement+statut+%C3%A9tudiant+salari%C3%A9+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "changement de statut étudiant à salarié", "changement de statut",
-            "autorisation de travail", "visa travail", "titre de séjour salarié",
+            "changement de statut", "autorisation de travail",
+            "visa travail", "titre de séjour salarié",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers", "OQTF"],
     },
     {
-        "nome": "Google News — Régularisation par le Travail France Métiers Tension",
-        "url": "https://news.google.com/rss/search?q=%22r%C3%A9gularisation+par+le+travail+France%22+m%C3%A9tier+tension+proc%C3%A9dure+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Régularisation Travail Étranger France",
+        "url": "https://news.google.com/rss/search?q=r%C3%A9gularisation+travail+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "régularisation par le travail France", "régularisation",
-            "métier en tension", "étranger", "titre de séjour travail",
+            "régularisation", "travail", "étranger",
+            "métier en tension", "titre de séjour",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
     },
     {
-        "nome": "Google News — Naturalisation Française Conditions Délais",
-        "url": "https://news.google.com/rss/search?q=%22naturalisation+fran%C3%A7aise+conditions%22+d%C3%A9lai+crit%C3%A8res+ressortissant&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Naturalisation Française Étranger Conditions",
+        "url": "https://news.google.com/rss/search?q=naturalisation+fran%C3%A7aise+%C3%A9tranger+conditions&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "naturalisation française conditions", "naturalisation",
-            "délai", "critères", "acquisition", "ressortissant",
+            "naturalisation", "étranger", "conditions", "délai",
+            "ressortissant",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
     },
     {
-        "nome": "Google News — Loi Immigration France Modifications",
-        "url": "https://news.google.com/rss/search?q=%22loi+immigration+France%22+%C3%A9tranger+s%C3%A9jour+r%C3%A9forme+vote&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Immigration France Étranger Loi Séjour",
+        "url": "https://news.google.com/rss/search?q=immigration+France+%C3%A9tranger+loi+s%C3%A9jour&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P01", "P04"],
         "urgencia": "alta",
         "score_conversao": 4,
         "keywords": [
-            "loi immigration France", "loi immigration", "étranger",
-            "séjour", "réforme", "politique migratoire",
+            "immigration", "étranger", "séjour", "loi",
+            "politique migratoire",
         ],
         "keywords_excluir": ["réfugié", "asile", "Frontex", "Méditerranée", "naufrage"],
     },
     {
-        "nome": "Google News — Réforme Titres de Séjour Validité Émission",
-        "url": "https://news.google.com/rss/search?q=%22r%C3%A9forme+des+titres+de+s%C3%A9jour%22+France+validit%C3%A9+%C3%A9mission+ANEF&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Titre Séjour Réforme France Étranger",
+        "url": "https://news.google.com/rss/search?q=titre+s%C3%A9jour+r%C3%A9forme+France+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P02", "P03"],
         "urgencia": "alta",
         "score_conversao": 4,
         "keywords": [
-            "réforme des titres de séjour", "titre de séjour",
-            "validité", "modification", "ANEF",
+            "titre de séjour", "réforme", "ANEF",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
     },
@@ -451,86 +440,81 @@ FONTES_RSS = [
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Droits des Étrangers France Législation Analyse",
-        "url": "https://news.google.com/rss/search?q=%22droits+des+%C3%A9trangers+France%22+l%C3%A9gislation+ressortissant+analyse+garanties&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Droits Étrangers France Législation",
+        "url": "https://news.google.com/rss/search?q=droits+%C3%A9trangers+France+l%C3%A9gislation&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "droits des étrangers France", "droits", "législation",
-            "ressortissant", "garanties", "CESEDA",
+            "droits", "étrangers", "législation", "CESEDA",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers", "OQTF"],
     },
     {
-        "nome": "Google News — Visa Long Séjour VLS-TS Validation OFII",
-        "url": "https://news.google.com/rss/search?q=%22visa+de+long+s%C3%A9jour+valant+titre+de+s%C3%A9jour%22+VLS-TS+validation+taxe+OFII&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — VLS-TS OFII Visa Séjour Étranger",
+        "url": "https://news.google.com/rss/search?q=VLS-TS+OFII+visa+s%C3%A9jour+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "juridica",
         "personas": ["P01", "P02"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "visa de long séjour valant titre de séjour", "VLS-TS",
-            "validation", "taxe consulaire", "OFII",
+            "VLS-TS", "OFII", "visa long séjour", "validation",
         ],
         "keywords_excluir": ["réfugié", "asile", "sans-papiers"],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
     # FINANÇAS — Inteligência Financeira Bi-Nacional (Euros × Reais)
-    # P03 e P04 — patrimônio, investimento e regularidade fiscal entre dois países
     # ═══════════════════════════════════════════════════════════════════════════
 
     {
-        "nome": "Google News — Fiscalité Compte Étranger Brésil Convention",
-        "url": "https://news.google.com/rss/search?q=%22fiscalit%C3%A9+compte+%C3%A0+l%27%C3%A9tranger+Br%C3%A9sil%22+convention+imp%C3%B4t+expatri%C3%A9+patrimoine&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Fiscalité Étranger Brésil France",
+        "url": "https://news.google.com/rss/search?q=fiscalit%C3%A9+%C3%A9tranger+Br%C3%A9sil+France+imp%C3%B4t&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "fiscalité compte à l'étranger Brésil", "convention fiscale",
-            "impôt", "non-résident", "expatrié", "patrimoine",
+            "fiscalité", "étranger", "Brésil", "convention fiscale",
+            "non-résident", "expatrié",
         ],
-        "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire", "dividende"],
+        "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire"],
     },
     {
-        "nome": "Google News — Déclaration Sortie Définitive Brésil Fiscal",
-        "url": "https://news.google.com/rss/search?q=%22d%C3%A9claration+de+sortie+d%C3%A9finitive+Br%C3%A9sil%22+OR+%22saida+definitiva%22+fiscal+non-r%C3%A9sident+Receita&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Sortie Définitive Brésil Fiscal Non-Résident",
+        "url": "https://news.google.com/rss/search?q=sortie+d%C3%A9finitive+Br%C3%A9sil+fiscal+non-r%C3%A9sident&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "alta",
         "score_conversao": 5,
         "keywords": [
-            "déclaration de sortie définitive Brésil", "saída definitiva",
-            "Receita Federal", "non-résident", "fiscal",
+            "sortie définitive", "Brésil", "non-résident", "fiscal",
+            "Receita Federal",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Ouverture PEA Résident France Avantages",
-        "url": "https://news.google.com/rss/search?q=%22ouverture+PEA%22+r%C3%A9sident+France+%C3%A9pargne+fiscalit%C3%A9+avantage+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — PEA Étranger France Résident Épargne",
+        "url": "https://news.google.com/rss/search?q=PEA+%C3%A9tranger+France+r%C3%A9sident+%C3%A9pargne&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "ouverture PEA", "PEA", "plan d'épargne en actions",
-            "résident fiscal", "épargne", "fiscalité", "étranger",
+            "PEA", "étranger", "résident fiscal", "épargne",
         ],
-        "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire", "dividende"],
+        "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire"],
     },
     {
-        "nome": "Google News — Meilleure Assurance Vie France Résidents Patrimoine",
-        "url": "https://news.google.com/rss/search?q=%22meilleure+assurance+vie+France%22+placement+r%C3%A9sident+patrimoine+succession+expatri%C3%A9&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Assurance Vie Étranger France Résident",
+        "url": "https://news.google.com/rss/search?q=assurance+vie+%C3%A9tranger+France+r%C3%A9sident&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "meilleure assurance vie France", "assurance-vie",
-            "résident", "patrimoine", "succession", "expatrié",
+            "assurance-vie", "étranger", "résident", "patrimoine", "expatrié",
         ],
         "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire"],
     },
@@ -548,112 +532,105 @@ FONTES_RSS = [
         "keywords_excluir": ["CAC 40", "Wall Street", "dividende", "géopolitique"],
     },
     {
-        "nome": "Google News — Indice Prix Consommation INSEE Inflation France",
-        "url": "https://news.google.com/rss/search?q=%22indice+des+prix+%C3%A0+la+consommation+INSEE%22+France+inflation+co%C3%BBt+logement+expatri%C3%A9&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — INSEE Inflation France Étranger",
+        "url": "https://news.google.com/rss/search?q=INSEE+inflation+France+co%C3%BBt+vie+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P01", "P03"],
         "urgencia": "baixa",
         "score_conversao": 3,
         "keywords": [
-            "indice des prix à la consommation INSEE", "INSEE",
-            "inflation", "coût de la vie", "logement",
+            "INSEE", "inflation", "coût de la vie",
         ],
         "keywords_excluir": ["CAC 40", "actionnaire"],
     },
     {
-        "nome": "Google News — Taux de Change Euro Real Transfert Remesse",
-        "url": "https://news.google.com/rss/search?q=%22taux+de+change+euro+real%22+Br%C3%A9sil+transfert+remesse+Wise&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Euro Real Brésil Change Transfert",
+        "url": "https://news.google.com/rss/search?q=euro+real+Br%C3%A9sil+change+transfert&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 4,
         "keywords": [
-            "taux de change euro real", "Euro Real", "Brésil",
-            "Wise", "remesse", "transfert",
+            "euro", "real", "Brésil", "transfert", "change",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Transfert de Fonds International Brésil Sécurité",
-        "url": "https://news.google.com/rss/search?q=%22transfert+de+fonds+international+Br%C3%A9sil%22+frais+s%C3%A9curit%C3%A9+plateforme+virement&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Transfert Brésil Euros Virement International",
+        "url": "https://news.google.com/rss/search?q=transfert+Br%C3%A9sil+euros+virement+international&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P02", "P03"],
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "transfert de fonds international Brésil", "virement international",
-            "Brésil", "frais", "sécurité",
+            "transfert", "Brésil", "virement", "international",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Placements Financiers Résidents Fiscaux France",
-        "url": "https://news.google.com/rss/search?q=%22placements+financiers+r%C3%A9sidents+fiscaux%22+France+%C3%A9pargne+investir+euros+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Placements Épargne Étranger France",
+        "url": "https://news.google.com/rss/search?q=placements+%C3%A9pargne+%C3%A9tranger+France+r%C3%A9sident&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "financas",
         "personas": ["P03", "P04"],
         "urgencia": "baixa",
         "score_conversao": 2,
         "keywords": [
-            "placements financiers résidents fiscaux", "épargne",
-            "résident fiscal", "livret", "patrimoine",
+            "placements", "épargne", "étranger", "résident fiscal",
         ],
         "keywords_excluir": ["CAC 40", "Wall Street", "actionnaire"],
     },
 
     # ═══════════════════════════════════════════════════════════════════════════
     # CÍVICA — Redes de Apoio & Networking
-    # Sentimento de pertencimento — fideliza P02 e P03
     # ═══════════════════════════════════════════════════════════════════════════
 
     {
-        "nome": "Google News — Cité Internationale Universitaire Paris Admissions",
-        "url": "https://news.google.com/rss/search?q=%22Cit%C3%A9+Internationale+Universitaire+de+Paris%22+admission+logement+r%C3%A9sidence+%C3%A9tranger&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Cité Internationale Paris Étranger Logement",
+        "url": "https://news.google.com/rss/search?q=Cit%C3%A9+internationale+Paris+%C3%A9tranger+logement&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "civica",
         "personas": ["P01", "P02"],
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "Cité Internationale Universitaire de Paris", "CIUP",
-            "admission", "logement", "international", "réseau",
+            "Cité Internationale Universitaire", "CIUP",
+            "étranger", "logement", "réseau",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Réseau Professionnel Singa France Intégration",
-        "url": "https://news.google.com/rss/search?q=%22Singa+France%22+r%C3%A9seau+professionnel+%C3%A9tranger+int%C3%A9gration+entrepreneuriat&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Singa France Étranger Intégration",
+        "url": "https://news.google.com/rss/search?q=Singa+France+%C3%A9tranger+int%C3%A9gration&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "civica",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "score_conversao": 2,
         "keywords": [
-            "Singa France", "réseau professionnel", "étranger",
-            "intégration", "entrepreneuriat", "communauté",
+            "Singa", "étranger", "intégration", "réseau",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Centres FLE Labellisés Français Langue Étrangère",
-        "url": "https://news.google.com/rss/search?q=%22centres+FLE+labellis%C3%A9s%22+OR+%22fran%C3%A7ais+langue+%C3%A9trang%C3%A8re%22+cours+%C3%A9tranger+int%C3%A9gration+France&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Français Langue Étrangère Cours Étranger",
+        "url": "https://news.google.com/rss/search?q=%22fran%C3%A7ais+langue+%C3%A9trang%C3%A8re%22+cours+%C3%A9tranger+France&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "civica",
         "personas": ["P02"],
         "urgencia": "baixa",
         "score_conversao": 2,
         "keywords": [
-            "centres FLE labellisés", "français langue étrangère",
-            "cours de français", "étranger", "intégration linguistique",
+            "français langue étrangère", "cours de français",
+            "étranger", "intégration",
         ],
         "keywords_excluir": [],
     },
     {
-        "nome": "Google News — Maisons des Associations Paris Networking",
-        "url": "https://news.google.com/rss/search?q=%22Maisons+des+Associations+Paris%22+OR+%22maison+de+la+vie+associative%22+%C3%A9tranger+networking+b%C3%A9n%C3%A9volat&hl=fr&gl=FR&ceid=FR:fr",
+        "nome": "Google News — Associations Paris Étranger Intégration",
+        "url": "https://news.google.com/rss/search?q=associations+Paris+%C3%A9tranger+int%C3%A9gration&hl=fr&gl=FR&ceid=FR:fr",
         "categoria": "civica",
         "personas": ["P02", "P03"],
         "urgencia": "baixa",
         "score_conversao": 2,
         "keywords": [
-            "Maisons des Associations Paris", "maison de la vie associative",
-            "bénévolat", "networking", "étranger", "arrondissement",
+            "associations", "étranger", "intégration", "bénévolat",
         ],
         "keywords_excluir": [],
     },
@@ -665,8 +642,8 @@ FONTES_RSS = [
         "urgencia": "media",
         "score_conversao": 3,
         "keywords": [
-            "accompagnement social", "accompagnement", "droits", "association",
-            "soutien", "intégration", "aide juridique", "bénévolat", "réseau",
+            "accompagnement", "droits", "association",
+            "soutien", "intégration", "aide juridique", "réseau",
         ],
         "keywords_excluir": [
             "réfugié", "asile", "demandeur d'asile", "sans-papiers",
@@ -688,15 +665,12 @@ def extrair_dominio_para_whitelist(entry) -> str:
     Extrai o domínio relevante para checar contra DOMINIOS_VALIDADOS.
     Prioriza entry.source.href (publisher real) sobre o redirect do Google News.
     """
-    # 1. source.href — domínio do publisher (mais confiável no Google News)
     try:
         source_href = entry.get('source', {}).get('href', '')
         if source_href and 'google.com' not in source_href:
             return urlparse(source_href).netloc.lstrip('www.')
     except Exception:
         pass
-
-    # 2. Fallback: link direto do artigo
     link = entry.get('link', '')
     return urlparse(link).netloc.lstrip('www.') if link else ''
 
@@ -705,7 +679,7 @@ def url_em_whitelist(entry) -> bool:
     """Descarta artigos de domínios não validados."""
     dominio = extrair_dominio_para_whitelist(entry)
     if not dominio:
-        return False  # domínio indeterminado → descartar por segurança
+        return False
     return any(d in dominio for d in DOMINIOS_VALIDADOS)
 
 
@@ -757,8 +731,7 @@ def url_ja_existe_no_notion(url: str) -> bool:
 def gerar_template_editorial(titulo: str, descricao: str, fonte: dict) -> str:
     """
     Gera um template editorial em Python nativo — zero custo de API.
-    Combina metadados da fonte com os dados brutos da notícia e entrega
-    um checklist de ação pronto para curadoria no Notion.
+    Combina metadados da fonte com os dados brutos da notícia.
     """
     cat       = fonte["categoria"]
     score     = fonte.get("score_conversao", 3)
@@ -787,6 +760,23 @@ def gerar_template_editorial(titulo: str, descricao: str, fonte: dict) -> str:
 
 # ─── Notion ───────────────────────────────────────────────────────────────────
 
+def garantir_propriedades_notion():
+    """
+    Cria automaticamente 'Score Conversão' (Number) e 'Template Editorial' (rich_text)
+    no database Notion, caso ainda não existam. Idempotente.
+    """
+    try:
+        notion.databases.update(
+            database_id=DATABASE_ENTRADA,
+            properties={
+                "Score Conversão":    {"number": {}},
+                "Template Editorial": {"rich_text": {}},
+            }
+        )
+    except Exception as e:
+        print(f"  ⚠ Não foi possível auto-criar propriedades no Notion: {e}")
+
+
 def criar_rascunho_notion(titulo: str, url: str, descricao: str,
                            fonte_nome: str, fonte: dict) -> bool:
     titulo_limpo     = normalizar_texto(titulo)[:200]
@@ -794,14 +784,18 @@ def criar_rascunho_notion(titulo: str, url: str, descricao: str,
     template         = gerar_template_editorial(titulo_limpo, descricao_limpa, fonte)
     score            = fonte.get("score_conversao", 3)
 
+    # Normaliza para os valores exatos das opções no Notion (case-sensitive)
+    urgencia_val  = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
+    categoria_val = _CATEGORIA_NOTION.get(fonte["categoria"], fonte["categoria"])
+
     properties = {
         "Título":             {"title":        [{"text": {"content": titulo_limpo}}]},
-        "Categoria":          {"multi_select": [{"name": fonte["categoria"]}]},
+        "Categoria":          {"multi_select": [{"name": categoria_val}]},
         "Persona":            {"multi_select": [{"name": p} for p in fonte["personas"]]},
-        "Urgência":           {"select":        {"name": fonte["urgencia"]}},
+        "Urgência":           {"select":        {"name": urgencia_val}},
         "Fonte":              {"url": url},
         "Notas":              {"rich_text":    [{"text": {"content": descricao_limpa}}]},
-        "Status":             {"select":        {"name": "rascunho"}},
+        "Status":             {"select":        {"name": "Rascunho"}},
         "Score Conversão":    {"number": score},
         "Template Editorial": {"rich_text":    [{"text": {"content": template[:1990]}}]},
     }
@@ -841,24 +835,14 @@ def processar_fonte_rss(fonte: dict, criados_por_categoria: dict,
                 continue
             if not dentro_da_janela(entry):
                 continue
-
-            # ── Filtro 1: whitelist de domínios ───────────────────────────────
             if not url_em_whitelist(entry):
                 continue
-
-            # ── Filtro 2: blacklist da fonte ─────────────────────────────────
             if contem_blacklist(titulo, descricao, blacklist):
                 continue
-
-            # ── Filtro 3: keywords específicas da fonte ───────────────────────
             if not contem_keyword(titulo, descricao, keywords):
                 continue
-
-            # ── Filtro 4: contexto migratório cruzado (sempre ativo) ──────────
             if not contem_nicho_migratorio(titulo, descricao):
                 continue
-
-            # ── Filtro 5: deduplicação no Notion ─────────────────────────────
             if url_ja_existe_no_notion(url):
                 print(f"  ↩ Duplicado: {titulo[:60]}")
                 continue
@@ -883,6 +867,8 @@ def main():
     print(f"   {len(FONTES_RSS)} fontes | {len(DOMINIOS_VALIDADOS)} domínios na whitelist")
     print(f"   Janela: {JANELA_DIAS} dias | Mínimo/categoria: {MINIMO_POR_CATEGORIA}\n")
 
+    garantir_propriedades_notion()
+
     total_criados        = 0
     criados_por_categoria = {}
 
@@ -893,7 +879,6 @@ def main():
         total_criados += qtd
 
     # ── 2ª passagem: relaxa keywords para categorias abaixo do mínimo ─────────
-    # Whitelist e filtro de nicho permanecem ativos.
     todas_categorias = set(f["categoria"] for f in FONTES_RSS)
     abaixo = [c for c in todas_categorias
               if criados_por_categoria.get(c, 0) < MINIMO_POR_CATEGORIA]
