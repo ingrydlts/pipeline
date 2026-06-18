@@ -1,0 +1,32 @@
+name: Por Dentro — Camada 3 (Instagram Carrossel)
+
+on:
+  schedule:
+    # Todo domingo às 09h UTC (11h Paris no verão, 10h no inverno)
+    - cron: '0 9 * * 0'
+  workflow_dispatch:  # permite rodar manualmente
+
+jobs:
+  instagram-carrossel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar Camada 3 — Instagram Carrossel
+        env:
+          NOTION_TOKEN:                     ${{ secrets.NOTION_TOKEN }}
+          ANTHROPIC_API_KEY:                ${{ secrets.ANTRHOPIC_API_KEY }}
+          NOTION_DATABASE_PAUTASPRONTAS_ID: ${{ secrets.NOTION_DATABASE_PAUTASPRONTAS_ID }}
+          NOTION_DATABASE_INSTAGRAM_ID:     ${{ secrets.NOTION_DATABASE_INSTAGRAM_ID }}
+        run: python scripts/instagram_carrossel.py
