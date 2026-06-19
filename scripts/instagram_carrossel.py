@@ -284,12 +284,8 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         "Promessa do conteudo": {
             "rich_text": [{"text": {"content": pauta["hook"][:2000]}}]
         },
-        "Pilars": {
-            "multi_select": [{"name": pilar_instagram}]
-        },
-        "META": {
-            "multi_select": [{"name": meta_val}]
-        },
+        **({"Pilars": {"multi_select": [{"name": pilar_instagram}]}} if pilar_instagram else {}),
+        **({"META":   {"multi_select": [{"name": meta_val}]}}        if meta_val else {}),
         "Wording Slides": {
             "rich_text": [{"text": {"content": conteudo["wording"][:2000]}}]
         },
