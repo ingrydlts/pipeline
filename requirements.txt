@@ -2,3 +2,4 @@ notion-client==2.2.1
 anthropic
 google-genai
 google-api-core
+python-dotenv
