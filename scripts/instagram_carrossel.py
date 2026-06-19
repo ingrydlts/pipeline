@@ -61,7 +61,7 @@ def buscar_pautas_carrossel() -> list[dict]:
     try:
         response = notion.databases.query(
             database_id=DATABASE_PAUTAS,
-            filter={"property": "format", "select": {"equals": "Carrossel"}},
+            filter={"property": "Formato", "select": {"equals": "Carrossel"}},
         )
     except Exception as e:
         print(f"  ✗ Erro ao consultar Pautas Prontas: {e}")
@@ -81,9 +81,7 @@ def buscar_pautas_carrossel() -> list[dict]:
 
         def _select(nome):
             s = props.get(nome, {}).get("select")
-            # FIX: strip whitespace para evitar strings como " " que são truthy
-            # mas rejeitadas pelo Notion como empty name
-            return (s["name"] or "").strip() if s else ""
+            return s["name"] if s else ""
 
         def _date(nome):
             d = props.get(nome, {}).get("date")
@@ -106,7 +104,7 @@ def buscar_pautas_carrossel() -> list[dict]:
             "hook":            _rt("Gancho"),
             "cta_copy":        _rt("CTA Copy"),
             "cta_tipo":        _select("CTA Tipo"),
-            "format":          _select("format"),
+            "format":          _select("Formato"),
             "kpi":             _select("KPI"),
             "urgency":         _select("Urgência"),
             "pilar":           _select("Pilar"),
@@ -245,14 +243,9 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
     Retorna o ID da página criada.
     """
     # Mapear pilar → Pilars (multi_select na base Instagram)
-    pilar_map = {
-        "Sistema":     "Sistema",
-        "Trajetória":  "Trajetória",
-        "Identidade":  "Identidade",
-        "Sociedade":   "Sociedade",
-    }
-    # FIX: garantir que o valor mapeado também seja stripped
-    pilar_instagram = pilar_map.get(pauta["pilar"], pauta["pilar"]).strip()
+    _PILARS_VALIDOS = {"Sistema", "Trajetória", "Identidade", "Sociedade"}
+    pilar_raw       = pauta["pilar"]
+    pilar_instagram = pilar_raw if pilar_raw in _PILARS_VALIDOS else ""
 
     # Mapear KPI → META (multi_select)
     kpi_map = {
@@ -261,18 +254,12 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         "Comentário alto":       "COMMENTS",
         "Alcance":               "REACH",
     }
-    meta_val = kpi_map.get(pauta["kpi"], pauta["kpi"]).strip()
+    meta_val = kpi_map.get(pauta["kpi"], pauta["kpi"])
 
     # Legenda = desc + CTA
     legenda = pauta["desc"]
     if pauta["cta_copy"]:
         legenda += f"\n\n{pauta['cta_copy']}"
-
-    # FIX: log do pilar para facilitar debug futuro
-    if not pilar_instagram:
-        print(f"  ⚠ Pilar vazio para '{pauta['titulo']}' — campo Pilars omitido.")
-    if not meta_val:
-        print(f"  ⚠ KPI vazio para '{pauta['titulo']}' — campo META omitido.")
 
     properties = {
         "Nom": {
@@ -281,8 +268,8 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         "Pautas Prontas por dentro": {
             "relation": [{"id": pauta["notion_page_id"]}]
         },
-        "Format": {
-            "multi_select": [{"name": "Carrousel"}]
+        "Formato": {
+            "select": {"name": "Carrousel"}
         },
         "Stage": {
             "status": {"name": "Design"}
@@ -293,9 +280,7 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         "Promessa do conteudo": {
             "rich_text": [{"text": {"content": pauta["hook"][:2000]}}]
         },
-        # FIX: só inclui Pilars se o valor for não-vazio após strip
         **({"Pilars": {"multi_select": [{"name": pilar_instagram}]}} if pilar_instagram else {}),
-        # FIX: só inclui META se o valor for não-vazio após strip
         **({"META":   {"multi_select": [{"name": meta_val}]}}        if meta_val else {}),
         "Wording Slides": {
             "rich_text": [{"text": {"content": conteudo["wording"][:2000]}}]
