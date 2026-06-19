@@ -70,7 +70,7 @@ def buscar_pautas_carrossel() -> list[dict]:
         database_id=DATABASE_PAUTAS,
         filter={
             "and": [
-                {"property": "format", "select": {"equals": "Carrossel"}},
+                {"property": "Formato", "select": {"equals": "Carrossel"}},
                 {"property": "Canva URL", "url": {"is_empty": True}},
                 {"property": "Data Publicação", "date": {"is_not_empty": True}},
             ]
@@ -100,15 +100,15 @@ def buscar_pautas_carrossel() -> list[dict]:
         pautas.append({
             "notion_page_id":  page["id"],
             "titulo":          _title(),
-            "desc":            _rt("desc"),
-            "hook":            _rt("hook"),
-            "cta_copy":        _rt("cta_copy"),
-            "cta_tipo":        _select("cta_tipo"),
-            "format":          _select("format"),
-            "kpi":             _select("kpi"),
-            "urgency":         _select("urgency"),
-            "pilar":           _select("pilar"),
-            "fonte":           _rt("fonte"),
+            "desc":            _rt("Descricao"),
+            "hook":            _rt("Gancho"),
+            "cta_copy":        _rt("CTA Copy"),
+            "cta_tipo":        _select("CTA Tipo"),
+            "format":          _select("Formato"),
+            "kpi":             _select("KPI"),
+            "urgency":         _select("Urgência"),
+            "pilar":           _select("Pilar"),
+            "fonte":           _rt("Fonte"),
             "data_publicacao": _date("Data Publicação"),
         })
 
