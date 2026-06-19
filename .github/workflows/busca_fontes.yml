@@ -25,7 +25,22 @@ jobs:
 
       - name: Rodar busca de fontes
         env:
-          NOTION_TOKEN:       ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          # ── Obrigatórios ───────────────────────────────────────────────────
+          NOTION_TOKEN:              ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID:        ${{ secrets.NOTION_DATABASE_ID }}
+          GEMINI_API_KEY:            ${{ secrets.GEMINI_API_KEY }}
+
+          # ── Opcionais — ativam a Pré-Análise Editorial ─────────────────────
+
+          # NOTION_STRATEGY_PAGE_ID: ID da página "Planejamento Estratégico" do Instagram
+          #   → Lê o calendário do mês atual + alertas editoriais permanentes
+          #   → ID da página: 383d602254ce815ba966c093da03eccc
+          #   → URL: https://app.notion.com/p/383d602254ce815ba966c093da03eccc
+          NOTION_STRATEGY_PAGE_ID:   ${{ secrets.NOTION_STRATEGY_PAGE_ID }}
+
+          # NOTION_CALENDAR_DB_ID: ID do banco de Calendário Editorial no Notion
+          #   → Usado para ler conteúdos já programados para Instagram
+          #   → Se não configurado, essa etapa é ignorada com aviso no log
+          NOTION_CALENDAR_DB_ID:     ${{ secrets.NOTION_CALENDAR_DB_ID }}
+
         run: python scripts/busca_fontes.py
