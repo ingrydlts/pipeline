@@ -42,15 +42,7 @@ def garantir_campos_instagram():
             properties={
                 "Wording Slides":   {"rich_text": {}},
                 "Prompts Imagem":   {"rich_text": {}},
-                "Status Aprovação": {
-                    "select": {
-                        "options": [
-                            {"name": "Aguardando", "color": "yellow"},
-                            {"name": "Aprovado",   "color": "green"},
-                            {"name": "Ajustar",    "color": "red"},
-                        ]
-                    }
-                },
+                "Status Aprovação": {"select": {}},
             }
         )
         print("  ✓ Campos da base Instagram verificados.")
@@ -66,16 +58,14 @@ def buscar_pautas_carrossel() -> list[dict]:
     - Canva URL vazio (ainda não processada)
     - Data Publicação preenchida (obrigatório)
     """
-    response = notion.databases.query(
-        database_id=DATABASE_PAUTAS,
-        filter={
-            "and": [
-                {"property": "Formato", "select": {"equals": "Carrossel"}},
-                {"property": "Canva URL", "url": {"is_empty": True}},
-                {"property": "Data Publicação", "date": {"is_not_empty": True}},
-            ]
-        }
-    )
+    try:
+        response = notion.databases.query(
+            database_id=DATABASE_PAUTAS,
+            filter={"property": "Formato", "select": {"equals": "Carrossel"}},
+        )
+    except Exception as e:
+        print(f"  ✗ Erro ao consultar Pautas Prontas: {e}")
+        return []
 
     pautas = []
     for page in response.get("results", []):
@@ -97,6 +87,16 @@ def buscar_pautas_carrossel() -> list[dict]:
             d = props.get(nome, {}).get("date")
             return d["start"] if d else None
 
+        canva_url      = props.get("Canva URL", {}).get("url") or ""
+        data_publicacao = _date("Data Publicação")
+
+        # Filtros em Python: só processa se Canva URL vazio e data preenchida
+        if canva_url:
+            continue
+        if not data_publicacao:
+            print(f"  ↩ Pulando '{_title()}' — sem Data Publicação.")
+            continue
+
         pautas.append({
             "notion_page_id":  page["id"],
             "titulo":          _title(),
@@ -109,7 +109,7 @@ def buscar_pautas_carrossel() -> list[dict]:
             "urgency":         _select("Urgência"),
             "pilar":           _select("Pilar"),
             "fonte":           _rt("Fonte"),
-            "data_publicacao": _date("Data Publicação"),
+            "data_publicacao": data_publicacao,
         })
 
     print(f"  ✓ {len(pautas)} pauta(s) carrossel encontrada(s) para processar.")
