@@ -1,12 +1,21 @@
 """
 CAMADA 1 — Por Dentro Content Pipeline
-Gemini 2.0 Flash (Google Search grounding) → filtra por audiência → Notion rascunhos
+Gemini 2.5 Flash (Google Search grounding) → filtra por audiência → Notion rascunhos
 
 Zero RSS. Zero listas de domínio. Zero filtros de keyword frágeis.
 O Gemini pesquisa o Google em tempo real e retorna os artigos mais relevantes.
 
 Roda toda sexta-feira às 7h UTC (via GitHub Actions).
 Resiliência: retry com exponential backoff em erros 429/503.
+
+PRÉ-ANÁLISE EDITORIAL (executada antes de qualquer busca):
+  1. Lê a página de Planejamento Estratégico do Instagram no Notion
+     → Extrai seção do mês atual + próximo + alertas editoriais permanentes
+  2. Carrega pautas e rascunhos já existentes no banco de entrada
+     → Deduplicação exata (URL) + semântica (overlap de palavras no título)
+  3. Carrega conteúdos já programados no calendário Instagram (se configurado)
+  4. Injeta todo esse contexto no prompt do Gemini
+     → Busca apenas notícias novas que complementem a estratégia vigente
 """
 
 import os
@@ -25,25 +34,35 @@ notion         = Client(auth=os.environ["NOTION_TOKEN"])
 cliente_gemini = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 
+# ── Databases/páginas opcionais — pré-análise editorial ───────────────────────
+# ID da página "Planejamento Estratégico" do Instagram no Notion
+# Exemplo: 383d602254ce815ba966c093da03eccc
+NOTION_STRATEGY_PAGE_ID = os.environ.get("NOTION_STRATEGY_PAGE_ID", "")
+
+# ID do banco de Calendário Editorial (para ler conteúdos programados)
+DATABASE_CALENDARIO = os.environ.get("NOTION_CALENDAR_DB_ID", "")
+
 # ─── Parâmetros globais ───────────────────────────────────────────────────────
 MINIMO_POR_CATEGORIA  = 5
 MAX_ARTIGOS_POR_FONTE = 8
-
-# Tempo de pausa obrigatório entre temas (5s = ~12 RPM, folga saudável abaixo de 15 RPM)
 SLEEP_ENTRE_TEMAS     = 5
-
-# Configuração de retry para erros 429 / 503
 RETRY_MAX_TENTATIVAS  = 3
-RETRY_BASE_SLEEP      = 10   # segundos na primeira falha; dobra a cada tentativa
+RETRY_BASE_SLEEP      = 10   # segundos; dobra a cada retry (10 → 20 → 40)
+OVERLAP_MIN_DUPLICATA = 3    # palavras (len > 4) em comum = tema duplicado
 
-# ─── Filtro de nicho migratório — última linha de defesa de relevância ─────────
+# ─── Meses em português ───────────────────────────────────────────────────────
+MESES_PT = {
+    1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL",
+    5: "MAIO",    6: "JUNHO",     7: "JULHO", 8: "AGOSTO",
+    9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO",
+}
+
+# ─── Filtro de nicho migratório ───────────────────────────────────────────────
 FILTRO_NICHO_MIGRATORIO = [
-    # Francês
     "étranger", "étrangère", "étrangers", "immigré", "immigrée",
     "immigration", "séjour", "brésil", "brésilien", "brésilienne",
     "titre", "expatrié", "expatriée", "visa", "ressortissant",
     "naturalisation", "régularisation", "non-résident",
-    # Português
     "estrangeiro", "estrangeira", "imigrante", "imigração",
     "expatriado", "brasil", "brasileiro", "brasileira",
 ]
@@ -327,7 +346,7 @@ FONTES_GEMINI = [
 ]
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Helpers gerais ───────────────────────────────────────────────────────────
 
 def normalizar_texto(texto: str) -> str:
     texto = re.sub(r'<[^>]+>', ' ', texto or '')
@@ -364,17 +383,276 @@ def extrair_palavras_chave(titulo: str, resumo: str) -> str:
 
 
 def gerar_template_editorial(fonte: dict) -> str:
-    checklist = CHECKLIST_POR_CATEGORIA.get(fonte["categoria"], [])
-    return "\n".join(checklist)
+    return "\n".join(CHECKLIST_POR_CATEGORIA.get(fonte["categoria"], []))
+
+
+def topico_ja_coberto(titulo: str, titulos_existentes: set) -> bool:
+    """
+    Retorna True se o título tem OVERLAP_MIN_DUPLICATA ou mais palavras significativas
+    (len > 4) em comum com qualquer título já existente no banco.
+    """
+    palavras_novas = set(w for w in titulo.lower().split() if len(w) > 4)
+    if not palavras_novas:
+        return False
+    for titulo_existente in titulos_existentes:
+        palavras_existentes = set(w for w in titulo_existente.split() if len(w) > 4)
+        if len(palavras_novas & palavras_existentes) >= OVERLAP_MIN_DUPLICATA:
+            return True
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PRÉ-ANÁLISE EDITORIAL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Helpers para leitura de blocos Notion ─────────────────────────────────────
+
+def _rich_text_para_str(rich_list: list) -> str:
+    return " ".join(r.get("plain_text", "") for r in rich_list if r.get("plain_text"))
+
+
+def _blocos_para_linhas(blocks: list) -> list[str]:
+    """Converte lista de blocos Notion em linhas de texto."""
+    linhas = []
+    tipos_texto = (
+        "paragraph", "heading_1", "heading_2", "heading_3",
+        "bulleted_list_item", "numbered_list_item", "callout",
+        "quote", "toggle", "to_do",
+    )
+    for b in blocks:
+        btype = b.get("type")
+        if not btype:
+            continue
+        if btype in tipos_texto:
+            rich = b.get(btype, {}).get("rich_text", [])
+            texto = _rich_text_para_str(rich)
+            if texto.strip():
+                linhas.append(texto.strip())
+        elif btype == "table_row":
+            cells = b.get("table_row", {}).get("cells", [])
+            row = " | ".join(_rich_text_para_str(c) for c in cells)
+            if row.strip():
+                linhas.append(row.strip())
+        elif btype == "code":
+            rich = b.get("code", {}).get("rich_text", [])
+            texto = _rich_text_para_str(rich)
+            if texto.strip():
+                linhas.append(texto.strip())
+    return linhas
+
+
+def _buscar_blocos_recursivo(block_id: str, profundidade: int = 0, max_prof: int = 2) -> list:
+    """Busca blocos de um ID de forma recursiva até max_prof níveis."""
+    if profundidade > max_prof:
+        return []
+    todos = []
+    try:
+        cursor = None
+        while True:
+            kwargs = {"block_id": block_id, "page_size": 100}
+            if cursor:
+                kwargs["start_cursor"] = cursor
+            r = notion.blocks.children.list(**kwargs)
+            todos.extend(r["results"])
+            if not r.get("has_more"):
+                break
+            cursor = r.get("next_cursor")
+        # Filhos de blocos com has_children (tabelas, toggles)
+        for bloco in list(todos):
+            if bloco.get("has_children"):
+                filhos = _buscar_blocos_recursivo(bloco["id"], profundidade + 1, max_prof)
+                todos.extend(filhos)
+    except Exception as e:
+        print(f"  ⚠ Erro ao buscar blocos (depth={profundidade}): {e}")
+    return todos
+
+
+# ── Funções de pré-análise ────────────────────────────────────────────────────
+
+def carregar_pautas_existentes() -> tuple[set, set]:
+    """
+    Lê TODOS os registros do banco de entrada no Notion (qualquer status).
+    Retorna:
+      titulos_existentes : set de títulos em lowercase (deduplicação semântica)
+      urls_preexistentes : set de URLs (deduplicação exata)
+    """
+    titulos, urls = set(), set()
+    try:
+        cursor = None
+        while True:
+            kwargs = {"database_id": DATABASE_ENTRADA, "page_size": 100}
+            if cursor:
+                kwargs["start_cursor"] = cursor
+            r = notion.databases.query(**kwargs)
+            for page in r["results"]:
+                t = page["properties"].get("Título", {})
+                if t.get("title") and t["title"]:
+                    titulos.add(t["title"][0]["plain_text"].lower().strip())
+                u = page["properties"].get("Fonte", {})
+                if u.get("url"):
+                    urls.add(u["url"])
+            if not r.get("has_more"):
+                break
+            cursor = r.get("next_cursor")
+        print(f"  📚 {len(titulos)} pautas existentes no banco Notion")
+        print(f"  🔗 {len(urls)} URLs já indexadas")
+    except Exception as e:
+        print(f"  ⚠ Erro ao carregar pautas existentes: {e}")
+    return titulos, urls
+
+
+def carregar_estrategia_instagram() -> str:
+    """
+    Lê a página de Planejamento Estratégico do Instagram no Notion
+    (NOTION_STRATEGY_PAGE_ID = 383d602254ce815ba966c093da03eccc).
+
+    Extrai:
+      1. Seção do mês atual + próximo mês (calendário ativo)
+      2. Alertas editoriais permanentes (P01 ausente, clusters subexplorados, etc.)
+
+    Retorna string com o contexto resumido para injetar no prompt do Gemini.
+    """
+    if not NOTION_STRATEGY_PAGE_ID:
+        print("  ℹ  NOTION_STRATEGY_PAGE_ID não configurado — estratégia Instagram ignorada")
+        return ""
+
+    try:
+        agora        = datetime.now()
+        mes_atual    = MESES_PT[agora.month]
+        mes_seguinte = MESES_PT[(agora.month % 12) + 1]
+        outros_meses = {m for m in MESES_PT.values() if m not in (mes_atual, mes_seguinte)}
+
+        print(f"  📖 Lendo página de estratégia Instagram ({mes_atual}/{mes_seguinte})...")
+        blocos = _buscar_blocos_recursivo(NOTION_STRATEGY_PAGE_ID, max_prof=2)
+        linhas = _blocos_para_linhas(blocos)
+
+        # Percorre as linhas identificando seções
+        secao_mes      = []
+        secao_alertas  = []
+        cap_mes        = False
+        cap_alertas    = False
+
+        for linha in linhas:
+            upper = linha.upper()
+
+            # Detecta início da seção do mês atual ou seguinte
+            if mes_atual in upper or mes_seguinte in upper:
+                cap_mes     = True
+                cap_alertas = False
+            # Detecta seção de alertas editoriais
+            elif "ALERTA" in upper and "EDITORIAL" in upper:
+                cap_alertas = True
+                cap_mes     = False
+            # Para a captura do mês ao encontrar outro mês não-alvo
+            elif cap_mes and any(m in upper for m in outros_meses):
+                cap_mes = False
+
+            if cap_mes and linha.strip():
+                secao_mes.append(linha.strip())
+            elif cap_alertas and linha.strip():
+                secao_alertas.append(linha.strip())
+
+        partes = []
+        if secao_mes:
+            partes.append(
+                f"CALENDÁRIO INSTAGRAM ATIVO ({mes_atual} / {mes_seguinte}):\n"
+                + "\n".join(secao_mes[:40])
+            )
+        if secao_alertas:
+            partes.append(
+                "ALERTAS EDITORIAIS PERMANENTES DO CANAL:\n"
+                + "\n".join(secao_alertas[:12])
+            )
+
+        resultado = "\n\n".join(partes)[:1800]
+        if resultado:
+            print(f"  🎯 Estratégia carregada: {len(secao_mes)} linhas de calendário "
+                  f"+ {len(secao_alertas)} alertas")
+        else:
+            print("  ⚠ Estratégia carregada mas seção do mês não encontrada na página")
+        return resultado
+
+    except Exception as e:
+        print(f"  ⚠ Erro ao carregar estratégia Instagram: {e}")
+        return ""
+
+
+def carregar_calendario_programado() -> list[str]:
+    """
+    Busca no banco de Calendário Editorial os conteúdos NÃO publicados para Instagram.
+    Retorna lista de títulos para completar o contexto de deduplicação.
+
+    Requer: NOTION_CALENDAR_DB_ID no ambiente.
+    Ajuste os nomes das propriedades conforme seu banco Notion se necessário.
+    """
+    programados = []
+    if not DATABASE_CALENDARIO:
+        print("  ℹ  NOTION_CALENDAR_DB_ID não configurado — calendário programado ignorado")
+        return programados
+    try:
+        r = notion.databases.query(
+            database_id=DATABASE_CALENDARIO,
+            filter={
+                "and": [
+                    {"property": "Status",     "status":       {"does_not_equal": "Publicado"}},
+                    {"property": "Plataforma", "multi_select": {"contains": "Instagram"}},
+                ]
+            },
+            page_size=50
+        )
+        for page in r["results"]:
+            t = page["properties"].get("Título", {})
+            if t.get("title") and t["title"]:
+                programados.append(t["title"][0]["plain_text"])
+            tema = page["properties"].get("Tema", {})
+            if tema.get("rich_text") and tema["rich_text"]:
+                programados.append(tema["rich_text"][0]["plain_text"])
+        print(f"  📅 {len(programados)} conteúdo(s) programados no calendário Instagram")
+    except Exception as e:
+        print(f"  ⚠ Erro ao carregar calendário programado: {e}")
+    return programados
+
+
+def montar_contexto_editorial(
+    estrategia_instagram: str,
+    programados_calendario: list[str],
+) -> str:
+    """
+    Monta o bloco de contexto editorial que será injetado no prompt do Gemini.
+    Instrui o modelo a buscar notícias que complementem a estratégia — sem repetir
+    o que já está programado ou mapeado no canal.
+    """
+    partes = []
+
+    if estrategia_instagram:
+        partes.append(estrategia_instagram)
+
+    if programados_calendario:
+        lista = "\n".join(f"  - {t}" for t in programados_calendario[:15])
+        partes.append(
+            f"CONTEÚDOS JÁ PROGRAMADOS NO CALENDÁRIO (NÃO REPETIR ESSES TEMAS):\n{lista}"
+        )
+
+    if not partes:
+        return ""
+
+    return (
+        "\n\n───────────────────────────────────────────────\n"
+        "CONTEXTO EDITORIAL DO CANAL POR DENTRO (Instagram):\n"
+        "───────────────────────────────────────────────\n"
+        + "\n\n".join(partes)
+        + "\n\nBUSQUE NOTÍCIAS QUE COMPLEMENTEM A ESTRATÉGIA ACIMA E TRAGAM "
+        "ÂNGULOS NOVOS NÃO COBERTOS PELOS TEMAS JÁ PROGRAMADOS."
+    )
 
 
 # ─── Gemini Search com Retry + Exponential Backoff ───────────────────────────
 
-def buscar_artigos_gemini(fonte: dict) -> list[dict]:
+def buscar_artigos_gemini(fonte: dict, contexto_editorial: str = "") -> list[dict]:
     """
-    Chama Gemini 2.0 Flash com Google Search grounding.
+    Chama Gemini 2.5 Flash com Google Search grounding.
+    Injeta contexto editorial no prompt para evitar repetição de temas já cobertos.
     Implementa retry com exponential backoff para erros 429 e 503.
-    Retorna lista de artigos: {titulo, url, resumo, data_publicacao, publisher}
     """
     excluir_str = ", ".join(fonte.get("excluir", []))
     excluir_instrucao = f"\nNÃO inclua artigos sobre: {excluir_str}." if excluir_str else ""
@@ -384,10 +662,11 @@ def buscar_artigos_gemini(fonte: dict) -> list[dict]:
 Use o Google Search para encontrar artigos publicados nos últimos 30 dias sobre:
 
 PESQUISA EM FRANCÊS: {fonte['query_fr']}
-PESQUISA EM PORTUGUÊS: {fonte['query_pt']}{excluir_instrucao}
+PESQUISA EM PORTUGUÊS: {fonte['query_pt']}{excluir_instrucao}{contexto_editorial}
 
 Foco: conteúdo útil para brasileiras que vivem ou querem viver na França.
 Priorize: fontes oficiais francesas, jornais reconhecidos, guias práticos para imigrantes.
+Priorize notícias RECENTES com ÂNGULO NOVO que complementem a estratégia editorial acima.
 
 Retorne um JSON array com até {MAX_ARTIGOS_POR_FONTE} artigos encontrados:
 [
@@ -418,36 +697,30 @@ IMPORTANTE: Retorne APENAS o JSON array. Sem markdown. Sem texto antes ou depois
             artigos = json.loads(raw)
             return artigos if isinstance(artigos, list) else []
 
-        except (ResourceExhausted,) as e:
-            # Erro 429 — cota da API atingida
+        except (ResourceExhausted,):
             if tentativa < RETRY_MAX_TENTATIVAS:
-                print(f"  ⚠ Cota atingida (429). Tentativa {tentativa}/{RETRY_MAX_TENTATIVAS}. "
-                      f"Aguardando {sleep_atual}s antes de tentar novamente...")
-                time.sleep(sleep_atual)
-                sleep_atual *= 2   # exponential backoff: 10s → 20s → 40s
-            else:
-                print(f"  ✗ Cota atingida após {RETRY_MAX_TENTATIVAS} tentativas. Pulando tema.")
-                return []
-
-        except (ServiceUnavailable,) as e:
-            # Erro 503 — serviço indisponível
-            if tentativa < RETRY_MAX_TENTATIVAS:
-                print(f"  ⚠ Serviço indisponível (503). Tentativa {tentativa}/{RETRY_MAX_TENTATIVAS}. "
-                      f"Aguardando {sleep_atual}s antes de tentar novamente...")
+                print(f"  ⚠ Cota atingida (429). Aguardando {sleep_atual}s...")
                 time.sleep(sleep_atual)
                 sleep_atual *= 2
             else:
-                print(f"  ✗ Serviço indisponível após {RETRY_MAX_TENTATIVAS} tentativas. Pulando tema.")
+                print(f"  ✗ Cota atingida após {RETRY_MAX_TENTATIVAS} tentativas. Pulando.")
+                return []
+
+        except (ServiceUnavailable,):
+            if tentativa < RETRY_MAX_TENTATIVAS:
+                print(f"  ⚠ Serviço indisponível (503). Aguardando {sleep_atual}s...")
+                time.sleep(sleep_atual)
+                sleep_atual *= 2
+            else:
+                print(f"  ✗ Serviço indisponível após {RETRY_MAX_TENTATIVAS} tentativas. Pulando.")
                 return []
 
         except json.JSONDecodeError as e:
-            # Resposta malformada — não faz retry (é erro de parse, não de quota)
             print(f"  ✗ JSON inválido do Gemini: {e}")
             return []
 
         except Exception as e:
-            # Outros erros inesperados — não faz retry
-            print(f"  ✗ Erro inesperado na chamada Gemini: {type(e).__name__}: {e}")
+            print(f"  ✗ Erro inesperado: {type(e).__name__}: {e}")
             return []
 
     return []
@@ -479,12 +752,12 @@ def criar_rascunho_notion(artigo: dict, fonte: dict) -> bool:
     publisher = normalizar_texto(artigo.get("publisher", ""))[:100]
     data_pub  = artigo.get("data_publicacao")
 
-    score          = fonte.get("score_conversao", 3)
-    formato        = _FORMATO_NOTION.get(score, "Carrossel")
-    urgencia_val   = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
-    categoria_val  = _CATEGORIA_NOTION.get(fonte["categoria"], fonte["categoria"])
-    checklist      = gerar_template_editorial(fonte)
-    palavras_chave = extrair_palavras_chave(titulo, resumo)
+    score         = fonte.get("score_conversao", 3)
+    formato       = _FORMATO_NOTION.get(score, "Carrossel")
+    urgencia_val  = _URGENCIA_NOTION.get(fonte["urgencia"], fonte["urgencia"])
+    categoria_val = _CATEGORIA_NOTION.get(fonte["categoria"], fonte["categoria"])
+    checklist     = gerar_template_editorial(fonte)
+    palavras_ch   = extrair_palavras_chave(titulo, resumo)
 
     properties = {
         "Título":             {"title":        [{"text": {"content": titulo}}]},
@@ -497,7 +770,7 @@ def criar_rascunho_notion(artigo: dict, fonte: dict) -> bool:
         "Score Conversão":    {"number": score},
         "Formato":            {"select":        {"name": formato}},
         "Template Editorial": {"rich_text":    [{"text": {"content": checklist}}]},
-        "Palavras-chave":     {"rich_text":    [{"text": {"content": palavras_chave}}]},
+        "Palavras-chave":     {"rich_text":    [{"text": {"content": palavras_ch}}]},
         "Publisher":          {"rich_text":    [{"text": {"content": publisher}}]},
     }
 
@@ -517,14 +790,19 @@ def criar_rascunho_notion(artigo: dict, fonte: dict) -> bool:
 
 # ─── Processador por fonte ────────────────────────────────────────────────────
 
-def processar_fonte(fonte: dict, criados_por_categoria: dict,
-                    urls_sessao: set) -> int:
+def processar_fonte(
+    fonte: dict,
+    criados_por_categoria: dict,
+    urls_sessao: set,
+    titulos_existentes: set,
+    urls_preexistentes: set,
+    contexto_editorial: str,
+) -> int:
     print(f"\n🔍 {fonte['nome']}")
     criados = 0
     cat     = fonte["categoria"]
-    excluir = fonte.get("excluir", [])
 
-    artigos = buscar_artigos_gemini(fonte)
+    artigos = buscar_artigos_gemini(fonte, contexto_editorial)
     print(f"  → {len(artigos)} artigo(s) retornado(s) pelo Gemini")
 
     for artigo in artigos:
@@ -536,19 +814,28 @@ def processar_fonte(fonte: dict, criados_por_categoria: dict,
             continue
         if url in urls_sessao:
             continue
-        if contem_excluir(titulo, resumo, excluir):
+        if url in urls_preexistentes:
+            print(f"  ↩ URL já indexada: {titulo[:60]}")
+            continue
+        if contem_excluir(titulo, resumo, fonte.get("excluir", [])):
             continue
         if not contem_nicho_migratorio(titulo, resumo):
             print(f"  ↩ Fora do nicho: {titulo[:60]}")
             continue
+        if topico_ja_coberto(titulo, titulos_existentes):
+            print(f"  ↩ Tema já coberto: {titulo[:60]}")
+            continue
         if url_ja_existe_no_notion(url):
-            print(f"  ↩ Duplicado: {titulo[:60]}")
+            print(f"  ↩ Duplicado (Notion check): {titulo[:60]}")
+            urls_preexistentes.add(url)
             continue
 
         ok = criar_rascunho_notion(artigo, fonte)
         if ok:
             criados += 1
             urls_sessao.add(url)
+            urls_preexistentes.add(url)
+            titulos_existentes.add(titulo.lower().strip())
             criados_por_categoria[cat] = criados_por_categoria.get(cat, 0) + 1
             print(f"  ✓ [score {fonte['score_conversao']}] [{cat}: {criados_por_categoria[cat]}] "
                   f"{titulo[:60]}")
@@ -559,14 +846,45 @@ def processar_fonte(fonte: dict, criados_por_categoria: dict,
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
-    data_hoje = datetime.now().strftime('%d/%m/%Y')
+    data_hoje   = datetime.now().strftime('%d/%m/%Y')
     total_temas = len(FONTES_GEMINI)
-    print(f"\n🔍 CAMADA 1 — Por Dentro ({data_hoje})")
-    print(f"   {total_temas} temas | Gemini 2.0 Flash + Google Search grounding")
+
+    print(f"\n{'═' * 62}")
+    print(f"🔍 CAMADA 1 — Por Dentro ({data_hoje})")
+    print(f"   {total_temas} temas | Gemini 2.5 Flash + Google Search grounding")
     print(f"   Pausa entre temas: {SLEEP_ENTRE_TEMAS}s | "
           f"Retry em 429/503: até {RETRY_MAX_TENTATIVAS}x (backoff {RETRY_BASE_SLEEP}s base)")
-    print(f"   Mínimo por categoria: {MINIMO_POR_CATEGORIA}\n")
+    print(f"   Mínimo por categoria: {MINIMO_POR_CATEGORIA}")
+    print(f"{'═' * 62}\n")
 
+    # ── PRÉ-ANÁLISE EDITORIAL ──────────────────────────────────────────────────
+    print("📋 PRÉ-ANÁLISE EDITORIAL — carregando contexto do Notion...\n")
+
+    # 1. Pautas e URLs já existentes (anti-repetição dupla)
+    titulos_existentes, urls_preexistentes = carregar_pautas_existentes()
+
+    # 2. Estratégia Instagram: calendário do mês atual + alertas editoriais permanentes
+    estrategia_instagram = carregar_estrategia_instagram()
+
+    # 3. Conteúdos já programados no banco de calendário (se configurado)
+    programados_calendario = carregar_calendario_programado()
+
+    # 4. Monta bloco de contexto editorial para o Gemini
+    contexto_editorial = montar_contexto_editorial(
+        estrategia_instagram,
+        programados_calendario,
+    )
+
+    if contexto_editorial:
+        print(f"\n  ✅ Contexto editorial montado ({len(contexto_editorial)} chars) "
+              f"— Gemini buscará apenas temas novos e complementares")
+    else:
+        print("\n  ℹ  Sem contexto editorial carregado — buscando com critérios padrão")
+
+    print(f"\n{'─' * 62}")
+    print("🚀 Iniciando buscas...\n")
+
+    # ── LOOP DE BUSCA ──────────────────────────────────────────────────────────
     garantir_propriedades_notion()
 
     total_criados         = 0
@@ -574,10 +892,16 @@ def main():
     urls_sessao           = set()
 
     for i, fonte in enumerate(FONTES_GEMINI):
-        qtd = processar_fonte(fonte, criados_por_categoria, urls_sessao)
+        qtd = processar_fonte(
+            fonte,
+            criados_por_categoria,
+            urls_sessao,
+            titulos_existentes,
+            urls_preexistentes,
+            contexto_editorial,
+        )
         total_criados += qtd
 
-        # Pausa obrigatória entre temas — mantém uso abaixo de 15 RPM
         if i < total_temas - 1:
             print(f"  ⏳ Aguardando {SLEEP_ENTRE_TEMAS}s para respeitar a cota da API...")
             time.sleep(SLEEP_ENTRE_TEMAS)
