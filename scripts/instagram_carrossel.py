@@ -61,7 +61,7 @@ def buscar_pautas_carrossel() -> list[dict]:
     try:
         response = notion.databases.query(
             database_id=DATABASE_PAUTAS,
-            filter={"property": "Formato", "select": {"equals": "Carrossel"}},
+            filter={"property": "format", "select": {"equals": "Carrossel"}},
         )
     except Exception as e:
         print(f"  ✗ Erro ao consultar Pautas Prontas: {e}")
@@ -106,7 +106,7 @@ def buscar_pautas_carrossel() -> list[dict]:
             "hook":            _rt("Gancho"),
             "cta_copy":        _rt("CTA Copy"),
             "cta_tipo":        _select("CTA Tipo"),
-            "format":          _select("Formato"),
+            "format":          _select("format"),
             "kpi":             _select("KPI"),
             "urgency":         _select("Urgência"),
             "pilar":           _select("Pilar"),
