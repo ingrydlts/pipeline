@@ -11,15 +11,12 @@ import os
 import json
 import re
 from datetime import date
-from dotenv import load_dotenv
 from notion_client import Client
 import anthropic
 
-load_dotenv()  # carrega variáveis do .env quando rodando localmente
-
 # ─── Clientes ─────────────────────────────────────────────────────────────────
 notion = Client(auth=os.environ["NOTION_TOKEN"])
-claude  = anthropic.Anthropic()  # lê ANTHROPIC_API_KEY do ambiente automaticamente
+claude  = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 DATABASE_PAUTAS    = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"].strip()
 DATABASE_INSTAGRAM = os.environ["NOTION_DATABASE_INSTAGRAM_ID"].strip()
@@ -84,9 +81,7 @@ def buscar_pautas_carrossel() -> list[dict]:
 
         def _select(nome):
             s = props.get(nome, {}).get("select")
-            # FIX: strip whitespace para evitar strings como " " que são truthy
-            # mas rejeitadas pelo Notion como empty name
-            return (s["name"] or "").strip() if s else ""
+            return s["name"] if s else ""
 
         def _date(nome):
             d = props.get(nome, {}).get("date")
@@ -247,24 +242,19 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
     Cria nova página na base Instagram com wording + prompts + metadados.
     Retorna o ID da página criada.
     """
-    # Opções válidas de Pilars na base Instagram (multi_select)
-    PILARS_VALIDOS = {"Sistema", "Trajetória", "Identidade", "Sociedade"}
-    pilar_raw = (pauta.get("pilar") or "").strip()
-    pilar_instagram = pilar_raw if pilar_raw in PILARS_VALIDOS else ""
+    # Mapear pilar → Pilars (multi_select na base Instagram)
+    _PILARS_VALIDOS = {"Sistema", "Trajetória", "Identidade", "Sociedade"}
+    pilar_raw       = pauta["pilar"]
+    pilar_instagram = pilar_raw if pilar_raw in _PILARS_VALIDOS else ""
 
-    # Opções válidas de META na base Instagram (multi_select)
+    # Mapear KPI → META (multi_select)
     kpi_map = {
         "Salvamento alto":       "SAVE",
         "Compartilhamento alto": "SHARE",
         "Comentário alto":       "COMMENTS",
         "Alcance":               "REACH",
     }
-    meta_raw = (pauta.get("kpi") or "").strip()
-    meta_val = kpi_map.get(meta_raw, "")
-
-    # Log para debug
-    print(f"  ℹ Pilar fonte='{pilar_raw}' → Instagram='{pilar_instagram}'")
-    print(f"  ℹ KPI fonte='{meta_raw}' → META='{meta_val}'")
+    meta_val = kpi_map.get(pauta["kpi"], pauta["kpi"])
 
     # Legenda = desc + CTA
     legenda = pauta["desc"]
@@ -278,7 +268,7 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         "Pautas Prontas por dentro": {
             "relation": [{"id": pauta["notion_page_id"]}]
         },
-        "Formato": {                          # campo select na base Instagram
+        "Formato": {
             "select": {"name": "Carrousel"}
         },
         "Stage": {
@@ -290,9 +280,7 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         "Promessa do conteudo": {
             "rich_text": [{"text": {"content": pauta["hook"][:2000]}}]
         },
-        # Só inclui Pilars se o valor for uma opção válida confirmada
         **({"Pilars": {"multi_select": [{"name": pilar_instagram}]}} if pilar_instagram else {}),
-        # Só inclui META se o KPI mapeou para um valor válido
         **({"META":   {"multi_select": [{"name": meta_val}]}}        if meta_val else {}),
         "Wording Slides": {
             "rich_text": [{"text": {"content": conteudo["wording"][:2000]}}]
