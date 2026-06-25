@@ -43,4 +43,10 @@ jobs:
           #   → Se não configurado, essa etapa é ignorada com aviso no log
           NOTION_CALENDAR_DB_ID:     ${{ secrets.NOTION_CALENDAR_DB_ID }}
 
+          # ── Bilan Editorial Semanal ────────────────────────────────────────
+          # NOTION_DATABASE_BILAN_ID: ID da database onde os bilans são salvos
+          #   → Cria uma página nova a cada rodada com síntese do que estava em alta
+          #   → Database: https://app.notion.com/p/topordentroviagens/38ad602254ce8072a39cf4146dd1bead
+          NOTION_DATABASE_BILAN_ID:  ${{ secrets.NOTION_DATABASE_BILAN_ID }}
+
         run: python scripts/busca_fontes.py
