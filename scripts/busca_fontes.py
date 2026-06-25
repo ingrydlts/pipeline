@@ -16,6 +16,11 @@ PRÉ-ANÁLISE EDITORIAL (executada antes de qualquer busca):
   3. Carrega conteúdos já programados no calendário Instagram (se configurado)
   4. Injeta todo esse contexto no prompt do Gemini
      → Busca apenas notícias novas que complementem a estratégia vigente
+
+BILAN EDITORIAL (executado ao final de cada rodada):
+  Gemini sintetiza o que estava em alta na internet para o público-alvo do canal,
+  identifica pontos altos e baixos, e salva o resultado no Notion como página
+  de inteligência editorial da semana.
 """
 
 import os
@@ -35,12 +40,13 @@ cliente_gemini = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 DATABASE_ENTRADA = os.environ["NOTION_DATABASE_ID"]
 
 # ── Databases/páginas opcionais — pré-análise editorial ───────────────────────
-# ID da página "Planejamento Estratégico" do Instagram no Notion
-# Exemplo: 383d602254ce815ba966c093da03eccc
 NOTION_STRATEGY_PAGE_ID = os.environ.get("NOTION_STRATEGY_PAGE_ID", "")
+DATABASE_CALENDARIO     = os.environ.get("NOTION_CALENDAR_DB_ID", "")
 
-# ID do banco de Calendário Editorial (para ler conteúdos programados)
-DATABASE_CALENDARIO = os.environ.get("NOTION_CALENDAR_DB_ID", "")
+# ── Database de Inteligência Editorial (bilan semanal) ────────────────────────
+# ID do banco onde os bilans são salvos. Se não configurado, o bilan só é impresso.
+# Exemplo: crie uma database "Inteligência Semanal" no Notion e coloque o ID aqui.
+DATABASE_BILAN = os.environ.get("NOTION_DATABASE_BILAN_ID", "")
 
 # ─── Parâmetros globais ───────────────────────────────────────────────────────
 MINIMO_POR_CATEGORIA  = 5
@@ -405,8 +411,6 @@ def topico_ja_coberto(titulo: str, titulos_existentes: set) -> bool:
 # PRÉ-ANÁLISE EDITORIAL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ── Helpers para leitura de blocos Notion ─────────────────────────────────────
-
 def _rich_text_para_str(rich_list: list) -> str:
     return " ".join(r.get("plain_text", "") for r in rich_list if r.get("plain_text"))
 
@@ -457,7 +461,6 @@ def _buscar_blocos_recursivo(block_id: str, profundidade: int = 0, max_prof: int
             if not r.get("has_more"):
                 break
             cursor = r.get("next_cursor")
-        # Filhos de blocos com has_children (tabelas, toggles)
         for bloco in list(todos):
             if bloco.get("has_children"):
                 filhos = _buscar_blocos_recursivo(bloco["id"], profundidade + 1, max_prof)
@@ -467,15 +470,7 @@ def _buscar_blocos_recursivo(block_id: str, profundidade: int = 0, max_prof: int
     return todos
 
 
-# ── Funções de pré-análise ────────────────────────────────────────────────────
-
 def carregar_pautas_existentes() -> tuple[set, set]:
-    """
-    Lê TODOS os registros do banco de entrada no Notion (qualquer status).
-    Retorna:
-      titulos_existentes : set de títulos em lowercase (deduplicação semântica)
-      urls_preexistentes : set de URLs (deduplicação exata)
-    """
     titulos, urls = set(), set()
     try:
         cursor = None
@@ -502,16 +497,6 @@ def carregar_pautas_existentes() -> tuple[set, set]:
 
 
 def carregar_estrategia_instagram() -> str:
-    """
-    Lê a página de Planejamento Estratégico do Instagram no Notion
-    (NOTION_STRATEGY_PAGE_ID = 383d602254ce815ba966c093da03eccc).
-
-    Extrai:
-      1. Seção do mês atual + próximo mês (calendário ativo)
-      2. Alertas editoriais permanentes (P01 ausente, clusters subexplorados, etc.)
-
-    Retorna string com o contexto resumido para injetar no prompt do Gemini.
-    """
     if not NOTION_STRATEGY_PAGE_ID:
         print("  ℹ  NOTION_STRATEGY_PAGE_ID não configurado — estratégia Instagram ignorada")
         return ""
@@ -526,7 +511,6 @@ def carregar_estrategia_instagram() -> str:
         blocos = _buscar_blocos_recursivo(NOTION_STRATEGY_PAGE_ID, max_prof=2)
         linhas = _blocos_para_linhas(blocos)
 
-        # Percorre as linhas identificando seções
         secao_mes      = []
         secao_alertas  = []
         cap_mes        = False
@@ -535,15 +519,12 @@ def carregar_estrategia_instagram() -> str:
         for linha in linhas:
             upper = linha.upper()
 
-            # Detecta início da seção do mês atual ou seguinte
             if mes_atual in upper or mes_seguinte in upper:
                 cap_mes     = True
                 cap_alertas = False
-            # Detecta seção de alertas editoriais
             elif "ALERTA" in upper and "EDITORIAL" in upper:
                 cap_alertas = True
                 cap_mes     = False
-            # Para a captura do mês ao encontrar outro mês não-alvo
             elif cap_mes and any(m in upper for m in outros_meses):
                 cap_mes = False
 
@@ -578,13 +559,6 @@ def carregar_estrategia_instagram() -> str:
 
 
 def carregar_calendario_programado() -> list[str]:
-    """
-    Busca no banco de Calendário Editorial os conteúdos NÃO publicados para Instagram.
-    Retorna lista de títulos para completar o contexto de deduplicação.
-
-    Requer: NOTION_CALENDAR_DB_ID no ambiente.
-    Ajuste os nomes das propriedades conforme seu banco Notion se necessário.
-    """
     programados = []
     if not DATABASE_CALENDARIO:
         print("  ℹ  NOTION_CALENDAR_DB_ID não configurado — calendário programado ignorado")
@@ -617,11 +591,6 @@ def montar_contexto_editorial(
     estrategia_instagram: str,
     programados_calendario: list[str],
 ) -> str:
-    """
-    Monta o bloco de contexto editorial que será injetado no prompt do Gemini.
-    Instrui o modelo a buscar notícias que complementem a estratégia — sem repetir
-    o que já está programado ou mapeado no canal.
-    """
     partes = []
 
     if estrategia_instagram:
@@ -649,11 +618,6 @@ def montar_contexto_editorial(
 # ─── Gemini Search com Retry + Exponential Backoff ───────────────────────────
 
 def buscar_artigos_gemini(fonte: dict, contexto_editorial: str = "") -> list[dict]:
-    """
-    Chama Gemini 2.5 Flash com Google Search grounding.
-    Injeta contexto editorial no prompt para evitar repetição de temas já cobertos.
-    Implementa retry com exponential backoff para erros 429 e 503.
-    """
     excluir_str = ", ".join(fonte.get("excluir", []))
     excluir_instrucao = f"\nNÃO inclua artigos sobre: {excluir_str}." if excluir_str else ""
 
@@ -797,10 +761,15 @@ def processar_fonte(
     titulos_existentes: set,
     urls_preexistentes: set,
     contexto_editorial: str,
-) -> int:
+) -> tuple[int, list[dict]]:
+    """
+    Retorna (quantidade_criada, lista_de_artigos_encontrados).
+    A lista completa (incluindo os não criados por duplicata) alimenta o bilan.
+    """
     print(f"\n🔍 {fonte['nome']}")
-    criados = 0
-    cat     = fonte["categoria"]
+    criados  = 0
+    cat      = fonte["categoria"]
+    artigos_encontrados = []  # todos os artigos retornados pelo Gemini nesta fonte
 
     artigos = buscar_artigos_gemini(fonte, contexto_editorial)
     print(f"  → {len(artigos)} artigo(s) retornado(s) pelo Gemini")
@@ -812,6 +781,15 @@ def processar_fonte(
 
         if not url or not titulo:
             continue
+
+        # Registra o artigo para o bilan (antes dos filtros)
+        artigos_encontrados.append({
+            "titulo":    titulo,
+            "resumo":    resumo,
+            "categoria": cat,
+            "fonte_nome": fonte["nome"],
+        })
+
         if url in urls_sessao:
             continue
         if url in urls_preexistentes:
@@ -840,7 +818,124 @@ def processar_fonte(
             print(f"  ✓ [score {fonte['score_conversao']}] [{cat}: {criados_por_categoria[cat]}] "
                   f"{titulo[:60]}")
 
-    return criados
+    return criados, artigos_encontrados
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BILAN EDITORIAL SEMANAL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def gerar_bilan_gemini(todos_artigos: list[dict], criados_por_categoria: dict, data_hoje: str) -> str:
+    """
+    Envia ao Gemini o resumo de tudo que foi encontrado nesta rodada e pede
+    um bilan editorial: o que estava em alta, pontos altos e baixos.
+    """
+    if not todos_artigos:
+        return "Nenhum artigo encontrado nesta rodada — bilan indisponível."
+
+    # Monta resumo compacto dos artigos para o prompt
+    linhas = []
+    for a in todos_artigos[:60]:  # limite para não estourar contexto
+        linhas.append(f"[{a['categoria']}] {a['titulo']} — {a['resumo'][:120]}")
+    artigos_str = "\n".join(linhas)
+
+    totais_str = " | ".join(f"{cat}: {n}" for cat, n in criados_por_categoria.items())
+
+    prompt = f"""Você é uma analista editorial especializada em imigração brasileira na França.
+
+Abaixo está o resultado da busca semanal de notícias para o canal Por Dentro (@ingrydinparis),
+feita em {data_hoje}. O canal é voltado para brasileiras que vivem ou querem viver na França.
+
+ARTIGOS ENCONTRADOS ESTA SEMANA:
+{artigos_str}
+
+TOTAIS POR CATEGORIA: {totais_str}
+
+Com base nesses artigos, escreva um BILAN EDITORIAL SEMANAL em português com:
+
+1. **O QUE ESTAVA EM ALTA** — 3 tendências ou temas que apareceram com mais força na internet esta semana, com contexto de por que importam para a audiência do canal.
+
+2. **PONTOS ALTOS** — 2 ou 3 oportunidades editoriais claras identificadas: temas com alto potencial de engajamento, urgência temporal ou ângulo novo não explorado pelo canal.
+
+3. **PONTOS BAIXOS** — 1 ou 2 alertas: temas saturados, notícias sem relevância prática para a audiência ou assuntos que devem ser evitados esta semana.
+
+4. **RECOMENDAÇÃO DA SEMANA** — Uma única frase com a aposta editorial mais estratégica para publicar nos próximos 7 dias.
+
+Tom: analítico, direto, sem jargão. Máximo 400 palavras."""
+
+    try:
+        response = cliente_gemini.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())]
+            )
+        )
+        return response.text.strip()
+    except Exception as e:
+        print(f"  ⚠ Erro ao gerar bilan com Gemini: {e}")
+        return f"Erro ao gerar bilan: {e}"
+
+
+def salvar_bilan_notion(bilan_texto: str, data_hoje: str, total_artigos: int, criados: int):
+    """
+    Salva o bilan como página no DATABASE_BILAN (se configurado).
+    Cada execução cria uma página nova com título 'Bilan — DD/MM/AAAA'.
+    """
+    if not DATABASE_BILAN:
+        print("\n  ℹ  NOTION_DATABASE_BILAN_ID não configurado — bilan salvo apenas nos logs.")
+        return
+
+    titulo = f"Bilan Editorial — {data_hoje}"
+
+    # Divide o texto em blocos de até 2000 chars (limite Notion por bloco rich_text)
+    def chunks(texto, tamanho=1990):
+        return [texto[i:i+tamanho] for i in range(0, len(texto), tamanho)]
+
+    children = []
+    for bloco in chunks(bilan_texto):
+        children.append({
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [{"type": "text", "text": {"content": bloco}}]
+            }
+        })
+
+    # Adiciona rodapé com métricas da rodada
+    children.append({
+        "object": "block",
+        "type": "divider",
+        "divider": {}
+    })
+    children.append({
+        "object": "block",
+        "type": "paragraph",
+        "paragraph": {
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": (
+                        f"📊 Métricas da rodada: {total_artigos} artigos encontrados pelo Gemini | "
+                        f"{criados} rascunhos criados no Notion | {data_hoje}"
+                    )
+                }
+            }]
+        }
+    })
+
+    try:
+        notion.pages.create(
+            parent={"database_id": DATABASE_BILAN},
+            properties={
+                "Name": {"title": [{"text": {"content": titulo}}]},
+            },
+            children=children,
+        )
+        print(f"  ✓ Bilan salvo no Notion: '{titulo}'")
+    except Exception as e:
+        print(f"  ⚠ Erro ao salvar bilan no Notion: {e}")
+        print("     → O bilan está disponível nos logs do GitHub Actions acima.")
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -860,17 +955,10 @@ def main():
     # ── PRÉ-ANÁLISE EDITORIAL ──────────────────────────────────────────────────
     print("📋 PRÉ-ANÁLISE EDITORIAL — carregando contexto do Notion...\n")
 
-    # 1. Pautas e URLs já existentes (anti-repetição dupla)
     titulos_existentes, urls_preexistentes = carregar_pautas_existentes()
-
-    # 2. Estratégia Instagram: calendário do mês atual + alertas editoriais permanentes
-    estrategia_instagram = carregar_estrategia_instagram()
-
-    # 3. Conteúdos já programados no banco de calendário (se configurado)
+    estrategia_instagram   = carregar_estrategia_instagram()
     programados_calendario = carregar_calendario_programado()
-
-    # 4. Monta bloco de contexto editorial para o Gemini
-    contexto_editorial = montar_contexto_editorial(
+    contexto_editorial     = montar_contexto_editorial(
         estrategia_instagram,
         programados_calendario,
     )
@@ -890,9 +978,10 @@ def main():
     total_criados         = 0
     criados_por_categoria = {}
     urls_sessao           = set()
+    todos_artigos_sessao  = []   # acumula todos os artigos para o bilan
 
     for i, fonte in enumerate(FONTES_GEMINI):
-        qtd = processar_fonte(
+        qtd, artigos_fonte = processar_fonte(
             fonte,
             criados_por_categoria,
             urls_sessao,
@@ -900,7 +989,8 @@ def main():
             urls_preexistentes,
             contexto_editorial,
         )
-        total_criados += qtd
+        total_criados        += qtd
+        todos_artigos_sessao += artigos_fonte
 
         if i < total_temas - 1:
             print(f"  ⏳ Aguardando {SLEEP_ENTRE_TEMAS}s para respeitar a cota da API...")
@@ -915,6 +1005,21 @@ def main():
         flag = "✓" if n >= MINIMO_POR_CATEGORIA else "⚠ abaixo do mínimo"
         print(f"   {flag}  {cat}: {n}")
     print("   Próximo: curadoria no Notion → marcar 'Enviar para Claude' → Camada 2")
+    print(f"{'═' * 62}\n")
+
+    # ── BILAN EDITORIAL SEMANAL ───────────────────────────────────────────────
+    print(f"\n{'═' * 62}")
+    print(f"📰 BILAN EDITORIAL — gerando síntese da semana...")
+    print(f"   {len(todos_artigos_sessao)} artigos analisados pelo Gemini nesta rodada")
+    print(f"{'─' * 62}")
+
+    bilan = gerar_bilan_gemini(todos_artigos_sessao, criados_por_categoria, data_hoje)
+
+    print("\n" + bilan)
+    print(f"\n{'─' * 62}")
+
+    salvar_bilan_notion(bilan, data_hoje, len(todos_artigos_sessao), total_criados)
+
     print(f"{'═' * 62}\n")
 
 
