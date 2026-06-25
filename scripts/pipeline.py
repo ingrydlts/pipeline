@@ -18,6 +18,7 @@ Só processa rascunhos com o checkbox "Enviar para Claude" marcado.
 import os
 import json
 import re
+from datetime import date, timedelta
 from notion_client import Client
 import anthropic
 
@@ -35,12 +36,74 @@ BRAND_CONTEXT     = open(os.path.join(_script_dir, "brand_context.txt"),    enco
 AUDIENCIA_CONTEXT = open(os.path.join(_script_dir, "audiencia_context.txt"), encoding="utf-8").read()
 
 # ─── Valores válidos para seletores Notion ────────────────────────────────────
-_KPI_VALIDOS      = ["Salvamento alto", "Compartilhamento alto", "Comentário alto", "Alcance"]
-_CTA_VALIDOS      = ["Comentário+Automação", "Newsletter", "Ambos", "Orgânico"]
-_FORMATO_VALIDOS  = ["Carrossel", "Reels", "Stories"]
-_PILAR_VALIDOS    = ["Sistema", "Trajetória", "Identidade", "Sociedade"]
+_KPI_VALIDOS       = ["Salvamento alto", "Compartilhamento alto", "Comentário alto", "Alcance"]
+_CTA_VALIDOS       = ["Comentário+Automação", "Newsletter", "Ambos", "Orgânico"]
+_FORMATO_VALIDOS   = ["Carrossel", "Reels", "Stories"]
+_PILAR_VALIDOS     = ["Sistema", "Trajetória", "Identidade", "Sociedade"]
 _VOICETONE_VALIDOS = ["Observador", "Explicativo", "Sentimental", "Humor"]
-_URGENCIA_VALIDOS = {"alta": "Alta", "media": "media", "baixa": "Baixa"}
+_URGENCIA_VALIDOS  = {"alta": "Alta", "media": "media", "baixa": "Baixa"}
+
+# ─── Calendário sazonal fixo ──────────────────────────────────────────────────
+# Usado para antecipar a data sugerida quando o tema é sazonal para o mês atual
+_SAZONALIDADE = {
+    1:  "voeux, caf, início ano",
+    2:  "imposto, renda, ir, declaração",
+    3:  "imposto, renda, ir, declaração",
+    4:  "imposto, renda, ir, declaração",
+    5:  "feriado, verão, férias",
+    6:  "letivo, verão, férias",
+    7:  "verão, férias, agosto",
+    8:  "verão, férias, rentrée",
+    9:  "rentrée, volta, aulas, rotina",
+    10: "energia, aquecimento, outono",
+    11: "black friday, compras",
+    12: "natal, réveillon, ano novo",
+}
+
+
+# ─── DATA DE PUBLICAÇÃO SUGERIDA ─────────────────────────────────────────────
+def calcular_data_publicacao(urgencia: str, palavras_chave: str = "") -> str:
+    """
+    Sugere data de publicação (quinta-feira) com base em urgência e sazonalidade.
+
+    Lógica:
+      • Alta   → próxima quinta-feira (mín. 2 dias de distância)
+      • Média  → quinta-feira da semana seguinte
+      • Baixa  → quinta-feira em 2 semanas
+
+    Quinta-feira é o dia-âncora do canal (YouTube publica quinta;
+    Instagram deriva na sexta ou nos dias seguintes).
+
+    Se o tema contiver palavras-chave sazonais do mês atual,
+    urgência "baixa" é promovida para "media" automaticamente.
+    """
+    hoje = date.today()
+
+    # Dias até a próxima quinta (weekday=3)
+    dias_ate_quinta = (3 - hoje.weekday()) % 7
+    if dias_ate_quinta < 2:          # muito próximo — evita prazo inviável de produção
+        dias_ate_quinta += 7
+    proxima_quinta = hoje + timedelta(days=dias_ate_quinta)
+
+    # Verificar sazonalidade do mês atual
+    palavras_sazonais = _SAZONALIDADE.get(hoje.month, "").split(", ")
+    palavras_lower    = palavras_chave.lower()
+    tema_sazonal_ativo = any(
+        palavra in palavras_lower
+        for palavra in palavras_sazonais
+        if len(palavra) > 3
+    )
+
+    urgencia_norm = urgencia.lower().strip()
+    if tema_sazonal_ativo and urgencia_norm == "baixa":
+        urgencia_norm = "media"   # promove urgência se tema é sazonal no mês
+
+    if urgencia_norm == "alta":
+        return proxima_quinta.isoformat()
+    elif urgencia_norm in ("media", "média"):
+        return (proxima_quinta + timedelta(weeks=1)).isoformat()
+    else:                            # baixa
+        return (proxima_quinta + timedelta(weeks=2)).isoformat()
 
 
 # ─── CATÁLOGO DE PRODUTOS ─────────────────────────────────────────────────────
@@ -94,7 +157,6 @@ def carregar_catalogo_produtos() -> list[dict]:
             "produtos":   [],
         }
 
-        # Buscar cada Produto Digital vinculado
         for prod_id in _relation_ids("Produtos Digitais"):
             try:
                 prod_page  = notion.pages.retrieve(page_id=prod_id)
@@ -106,7 +168,7 @@ def carregar_catalogo_produtos() -> list[dict]:
                 status_s  = prod_props.get("Status", {}).get("select")
                 status    = status_s["name"] if status_s else ""
 
-                obj_rt    = prod_props.get("Objetivo de Negócio", {}).get("rich_text", [])
+                obj_rt      = prod_props.get("Objetivo de Negócio", {}).get("rich_text", [])
                 obj_negocio = obj_rt[0]["text"]["content"] if obj_rt else ""
 
                 if nome:
@@ -149,14 +211,12 @@ def garantir_propriedades_saida():
         notion.databases.update(
             database_id=DATABASE_SAIDA,
             properties={
-                # ── Classificação editorial (podem não existir na DB nova) ────
                 "Formato":    {"select": {}},
                 "KPI":        {"select": {}},
                 "Urgência":   {"select": {}},
                 "Categoria":  {"select": {}},
                 "Persona":    {"multi_select": {}},
                 "Status":     {"select": {}},
-                # ── Conteúdo estruturado ─────────────────────────────────────
                 "Gancho":                {"rich_text": {}},
                 "Descricao":             {"rich_text": {}},
                 "Instrução de Produção": {"rich_text": {}},
@@ -164,17 +224,15 @@ def garantir_propriedades_saida():
                 "Fonte URL":             {"url": {}},
                 "Score Conversão":       {"number": {}},
                 "Palavras-chave":        {"rich_text": {}},
-                # ── CTA & newsletter ─────────────────────────────────────────
                 "CTA Tipo":          {"select": {}},
                 "CTA Copy":          {"rich_text": {}},
                 "Ângulo Newsletter": {"rich_text": {}},
-                # ── Produto e landing page ────────────────────────────────────
-                "Produto Sugerido": {"rich_text": {}},
-                "Landing Page URL": {"url": {}},
-                # Nota: "🌐 Páginas Online (1)" já existe como relation nativa.
-                # ── Pilar editorial e tom de voz ─────────────────────────────
+                "Produto Sugerido":  {"rich_text": {}},
+                "Landing Page URL":  {"url": {}},
                 "Pilar":      {"select": {}},
                 "Voice Tone": {"select": {}},
+                # ── NOVO: data sugerida de publicação ────────────────────────
+                "Data Publicação": {"date": {}},
             }
         )
         print("  ✓ Banco de saída: propriedades verificadas.")
@@ -243,7 +301,6 @@ def estruturar_com_claude(pauta: dict, catalogo: list[dict]) -> dict:
     formato_sugerido = pauta["formato_sugerido"] or "Carrossel"
     score            = pauta["score_conversao"]
 
-    # ── Catálogo compacto: uma linha por entrada ─────────────────────────────
     if catalogo:
         entradas = []
         for p in catalogo:
@@ -287,22 +344,24 @@ Retorne APENAS JSON válido:
 
     raw = msg.content[0].text.strip()
     raw = re.sub(r'^```json\s*|^```|\s*```$', '', raw, flags=re.MULTILINE).strip()
-    # Localiza o início do objeto JSON (ignora texto de prefácio)
     start = raw.find('{')
     if start > 0:
         raw = raw[start:]
-    # raw_decode para no fim do primeiro objeto JSON — ignora texto extra após o JSON
     decoder = json.JSONDecoder()
     result, _ = decoder.raw_decode(raw)
 
-    # ── Enriquecer com metadados da pauta ────────────────────────────────────
-    result["fonteUrl"]      = pauta["fonte_url"]
-    result["personas"]      = pauta["personas"]
-    result["categoria"]     = pauta["categoria"]
-    result["score"]         = score
+    result["fonteUrl"]       = pauta["fonte_url"]
+    result["personas"]       = pauta["personas"]
+    result["categoria"]      = pauta["categoria"]
+    result["score"]          = score
     result["palavras_chave"] = pauta["palavras_chave"]
 
-    # ── Resolver pagina_id a partir da URL retornada pelo Claude ─────────────
+    # ── NOVO: calcular data de publicação sugerida ────────────────────────────
+    result["data_publicacao"] = calcular_data_publicacao(
+        result.get("urgency", pauta.get("urgencia", "baixa")),
+        pauta.get("palavras_chave", ""),
+    )
+
     pagina_url = result.get("pagina_url_relevante", "")
     pagina_id  = None
     if pagina_url and catalogo:
@@ -312,7 +371,6 @@ Retorne APENAS JSON válido:
                 break
     result["pagina_id_relevante"] = pagina_id
 
-    # ── Validar selects para não quebrar o Notion ─────────────────────────────
     if result.get("kpi") not in _KPI_VALIDOS:
         result["kpi"] = "Salvamento alto"
     if result.get("cta_tipo") not in _CTA_VALIDOS:
@@ -332,7 +390,6 @@ def escrever_no_notion(p: dict):
     urgencia_raw = p.get("urgency", "")
     urgencia_val = _URGENCIA_VALIDOS.get(urgencia_raw.lower(), urgencia_raw) or "media"
 
-    # Título da base é "Name" (não "Título") nesta base de dados
     properties = {
         "Name": {
             "title": [{"text": {"content": p["title"]}}]
@@ -349,21 +406,20 @@ def escrever_no_notion(p: dict):
         "Fonte URL":             {"url": p["fonteUrl"] or None},
         "Score Conversão":       {"number": p["score"]},
         "Palavras-chave":        {"rich_text": [{"text": {"content": p.get("palavras_chave") or ""}}]},
-        # CTA
         "CTA Tipo":          {"select":    {"name": p["cta_tipo"]}},
         "CTA Copy":          {"rich_text": [{"text": {"content": p.get("cta_copy") or ""}}]},
         "Ângulo Newsletter": {"rich_text": [{"text": {"content": p.get("angulo_newsletter") or ""}}]},
-        # Produto / landing page
         "Produto Sugerido":  {"rich_text": [{"text": {"content": p.get("produto_sugerido") or ""}}]},
         "Landing Page URL":  {"url": p.get("pagina_url_relevante") or None},
-        # Pilar e voice tone
         "Pilar":      {"select": {"name": p["pilar"]}},
         "Voice Tone": {"select": {"name": p["voice_tone"]}},
-        # Status
         "Status":     {"select": {"name": "Pronta"}},
     }
 
-    # Relation a Páginas Online — usa a propriedade já existente "🌐 Páginas Online (1)"
+    # ── NOVO: data sugerida de publicação ─────────────────────────────────────
+    if p.get("data_publicacao"):
+        properties["Data Publicação"] = {"date": {"start": p["data_publicacao"]}}
+
     if p.get("pagina_id_relevante"):
         properties["🌐 Páginas Online (1)"] = {
             "relation": [{"id": p["pagina_id_relevante"]}]
@@ -392,8 +448,6 @@ def main():
     print("   Verificando propriedades dos bancos...")
     garantir_propriedades_entrada()
 
-    # ── Verificação antecipada do banco de saída (testa READ + WRITE) ────────
-    # Testa acesso ANTES de chamar Claude, para não desperdiçar tokens.
     print(f"  ℹ DATABASE_SAIDA ID: {DATABASE_SAIDA[:8]}...{DATABASE_SAIDA[-4:]} ({len(DATABASE_SAIDA)} chars)")
     try:
         notion.databases.retrieve(database_id=DATABASE_SAIDA)
@@ -405,7 +459,6 @@ def main():
         print("   Encerrando sem chamar Claude.\n")
         return
 
-    # Testa ESCRITA criando uma página temporária e arquivando imediatamente
     try:
         _test = notion.pages.create(
             parent={"database_id": DATABASE_SAIDA},
@@ -416,8 +469,6 @@ def main():
     except Exception as e:
         print(f"\n🚨 ERRO CRÍTICO: Sem permissão de escrita no banco de saída — {e}")
         print("   → A integração 'por-dentro-pipeline' precisa de permissão INSERT.")
-        print("   → Verifique em notion.so/profile/integrations → Capabilities → Insert content.")
-        print("   → Ou reconecte a integração no Notion: ••• → Connections → por-dentro-pipeline.")
         print("   Encerrando sem chamar Claude.\n")
         return
 
@@ -447,8 +498,9 @@ def main():
             marcar_processado(pauta["notion_page_id"])
 
             produto_log = f" → produto: {estruturada['produto_sugerido']}" if estruturada.get("produto_sugerido") else ""
+            data_log    = f" 📅 {estruturada['data_publicacao']}" if estruturada.get("data_publicacao") else ""
             print(f"  ✓ [{estruturada['cta_tipo']}] [{estruturada['pilar']}] "
-                  f"{estruturada['title'][:55]}{produto_log}")
+                  f"{estruturada['title'][:55]}{produto_log}{data_log}")
             processados += 1
         except Exception as e:
             print(f"  ✗ Erro: {e}")
