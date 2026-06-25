@@ -877,18 +877,132 @@ Tom: analítico, direto, sem jargão. Máximo 400 palavras."""
         return f"Erro ao gerar bilan: {e}"
 
 
-def salvar_bilan_notion(bilan_texto: str, data_hoje: str, total_artigos: int, criados: int):
+def garantir_propriedades_bilan():
     """
-    Salva o bilan como página no DATABASE_BILAN (se configurado).
-    Cada execução cria uma página nova com título 'Bilan — DD/MM/AAAA'.
+    Cria as propriedades estruturadas na database BILAN se ainda não existirem.
+    Idempotente — pode rodar toda vez sem problema.
+    """
+    if not DATABASE_BILAN:
+        return
+    try:
+        notion.databases.update(
+            database_id=DATABASE_BILAN,
+            title=[{"type": "text", "text": {"content": "Bilan Editorial Semanal"}}],
+            properties={
+                "Data da Rodada":           {"date": {}},
+                "Mês de Referência":        {
+                    "select": {"options": [
+                        {"name": "Janeiro",   "color": "blue"},
+                        {"name": "Fevereiro", "color": "blue"},
+                        {"name": "Março",     "color": "green"},
+                        {"name": "Abril",     "color": "green"},
+                        {"name": "Maio",      "color": "green"},
+                        {"name": "Junho",     "color": "yellow"},
+                        {"name": "Julho",     "color": "yellow"},
+                        {"name": "Agosto",    "color": "yellow"},
+                        {"name": "Setembro",  "color": "orange"},
+                        {"name": "Outubro",   "color": "orange"},
+                        {"name": "Novembro",  "color": "red"},
+                        {"name": "Dezembro",  "color": "red"},
+                    ]}
+                },
+                "Total Artigos Analisados": {"number": {"format": "number"}},
+                "Total Rascunhos Criados":  {"number": {"format": "number"}},
+                "Taxa de Aproveitamento":   {
+                    "formula": {
+                        "expression": (
+                            'if(prop("Total Artigos Analisados") > 0, '
+                            'round(prop("Total Rascunhos Criados") / '
+                            'prop("Total Artigos Analisados") * 100), 0)'
+                        )
+                    }
+                },
+                "Categoria Mais Rica": {
+                    "select": {"options": [
+                        {"name": "Burocratica", "color": "blue"},
+                        {"name": "Juridica",    "color": "red"},
+                        {"name": "Academica",   "color": "green"},
+                        {"name": "Financas",    "color": "yellow"},
+                        {"name": "Civica",      "color": "purple"},
+                    ]}
+                },
+                "Recomendação da Semana": {"rich_text": {}},
+                "Análise Completa":       {"rich_text": {}},
+                "Status de Uso": {
+                    "select": {"options": [
+                        {"name": "Não consultado", "color": "gray"},
+                        {"name": "Consultado",     "color": "yellow"},
+                        {"name": "Virou pauta",    "color": "green"},
+                    ]}
+                },
+            }
+        )
+        print("  ✓ Propriedades da database Bilan verificadas/criadas")
+    except Exception as e:
+        print(f"  ⚠ Não foi possível configurar propriedades do Bilan: {e}")
+
+
+_MESES_NOME = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+}
+
+
+def _extrair_recomendacao(bilan_texto: str) -> str:
+    """Extrai a frase da seção 'RECOMENDAÇÃO DA SEMANA' do bilan."""
+    match = re.search(
+        r'recomenda[çc][aã]o da semana[^\n]*\n+(.+?)(?:\n\n|\Z)',
+        bilan_texto,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if match:
+        texto = match.group(1).strip()
+        # Remove markdown bold (**texto**)
+        texto = re.sub(r'\*+', '', texto).strip()
+        return texto[:1990]
+    return ""
+
+
+def salvar_bilan_notion(
+    bilan_texto: str,
+    data_hoje: str,
+    total_artigos: int,
+    criados: int,
+    criados_por_categoria: dict,
+):
+    """
+    Salva o bilan como página no DATABASE_BILAN com todas as propriedades estruturadas.
+    Cada execução cria uma página nova com título 'Bilan Editorial — DD/MM/AAAA'.
     """
     if not DATABASE_BILAN:
         print("\n  ℹ  NOTION_DATABASE_BILAN_ID não configurado — bilan salvo apenas nos logs.")
         return
 
+    agora  = datetime.now()
     titulo = f"Bilan Editorial — {data_hoje}"
 
-    # Divide o texto em blocos de até 2000 chars (limite Notion por bloco rich_text)
+    # ── Campos derivados ──────────────────────────────────────────────────────
+
+    # Categoria que gerou mais rascunhos nesta rodada
+    categoria_mais_rica = (
+        max(criados_por_categoria, key=criados_por_categoria.get)
+        if criados_por_categoria
+        else "burocratica"
+    )
+    # Capitaliza para o Select do Notion (ex: "burocratica" → "Burocratica")
+    categoria_select = categoria_mais_rica.capitalize()
+
+    # Recomendação da semana (extraída do texto do bilan)
+    recomendacao = _extrair_recomendacao(bilan_texto)
+
+    # Data ISO para o campo Date do Notion
+    data_iso = agora.strftime('%Y-%m-%d')
+
+    # Mês de referência
+    mes_nome = _MESES_NOME[agora.month]
+
+    # ── Corpo da página (Análise Completa em blocos) ──────────────────────────
     def chunks(texto, tamanho=1990):
         return [texto[i:i+tamanho] for i in range(0, len(texto), tamanho)]
 
@@ -902,12 +1016,8 @@ def salvar_bilan_notion(bilan_texto: str, data_hoje: str, total_artigos: int, cr
             }
         })
 
-    # Adiciona rodapé com métricas da rodada
-    children.append({
-        "object": "block",
-        "type": "divider",
-        "divider": {}
-    })
+    # Rodapé com métricas
+    children.append({"object": "block", "type": "divider", "divider": {}})
     children.append({
         "object": "block",
         "type": "paragraph",
@@ -916,23 +1026,59 @@ def salvar_bilan_notion(bilan_texto: str, data_hoje: str, total_artigos: int, cr
                 "type": "text",
                 "text": {
                     "content": (
-                        f"📊 Métricas da rodada: {total_artigos} artigos encontrados pelo Gemini | "
-                        f"{criados} rascunhos criados no Notion | {data_hoje}"
+                        f"📊 Rodada: {total_artigos} artigos analisados | "
+                        f"{criados} rascunhos criados | "
+                        + " | ".join(f"{k}: {v}" for k, v in criados_por_categoria.items())
                     )
                 }
             }]
         }
     })
 
+    # ── Propriedades da página ────────────────────────────────────────────────
+    properties = {
+        "Name": {
+            "title": [{"text": {"content": titulo}}]
+        },
+        "Data da Rodada": {
+            "date": {"start": data_iso}
+        },
+        "Mês de Referência": {
+            "select": {"name": mes_nome}
+        },
+        "Total Artigos Analisados": {
+            "number": total_artigos
+        },
+        "Total Rascunhos Criados": {
+            "number": criados
+        },
+        "Categoria Mais Rica": {
+            "select": {"name": categoria_select}
+        },
+        "Status de Uso": {
+            "select": {"name": "Não consultado"}
+        },
+    }
+
+    # Campos rich_text opcionais (só adiciona se tiver conteúdo)
+    if recomendacao:
+        properties["Recomendação da Semana"] = {
+            "rich_text": [{"text": {"content": recomendacao}}]
+        }
+    if bilan_texto:
+        properties["Análise Completa"] = {
+            "rich_text": [{"text": {"content": bilan_texto[:1990]}}]
+        }
+
     try:
         notion.pages.create(
             parent={"database_id": DATABASE_BILAN},
-            properties={
-                "Name": {"title": [{"text": {"content": titulo}}]},
-            },
+            properties=properties,
             children=children,
         )
         print(f"  ✓ Bilan salvo no Notion: '{titulo}'")
+        if recomendacao:
+            print(f"  💡 Recomendação: {recomendacao[:80]}...")
     except Exception as e:
         print(f"  ⚠ Erro ao salvar bilan no Notion: {e}")
         print("     → O bilan está disponível nos logs do GitHub Actions acima.")
@@ -974,6 +1120,7 @@ def main():
 
     # ── LOOP DE BUSCA ──────────────────────────────────────────────────────────
     garantir_propriedades_notion()
+    garantir_propriedades_bilan()
 
     total_criados         = 0
     criados_por_categoria = {}
@@ -1018,7 +1165,7 @@ def main():
     print("\n" + bilan)
     print(f"\n{'─' * 62}")
 
-    salvar_bilan_notion(bilan, data_hoje, len(todos_artigos_sessao), total_criados)
+    salvar_bilan_notion(bilan, data_hoje, len(todos_artigos_sessao), total_criados, criados_por_categoria)
 
     print(f"{'═' * 62}\n")
 
