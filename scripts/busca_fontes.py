@@ -558,38 +558,57 @@ def carregar_estrategia_instagram() -> str:
         return ""
 
 
-def carregar_calendario_programado() -> list[str]:
-    programados = []
+def carregar_calendario_programado() -> tuple[list[str], set[str]]:
+    """
+    Retorna (lista_para_contexto_gemini, set_para_dedup_hard).
+
+    Filtra APENAS posts com "Data Publicação" preenchida — ou seja, já agendados.
+    Posts sem data são ideias soltas e não bloqueiam novas buscas.
+    """
+    programados_lista = []   # para o contexto textual do Gemini
+    programados_set   = set()  # para deduplicação hard (mesmo topico_ja_coberto)
+
     if not DATABASE_CALENDARIO:
         print("  ℹ  NOTION_CALENDAR_DB_ID não configurado — calendário programado ignorado")
-        return programados
+        return programados_lista, programados_set
+
     try:
         r = notion.databases.query(
             database_id=DATABASE_CALENDARIO,
             filter={
                 "and": [
-                    {"property": "Status",     "status":       {"does_not_equal": "Publicado"}},
-                    {"property": "Plataforma", "multi_select": {"contains": "Instagram"}},
+                    {"property": "Status",           "status":       {"does_not_equal": "Publicado"}},
+                    {"property": "Plataforma",        "multi_select": {"contains": "Instagram"}},
+                    # Só bloqueia posts que têm data definida (= planejados de fato)
+                    {"property": "Data Publicação",   "date":         {"is_not_empty": True}},
                 ]
             },
-            page_size=50
+            page_size=100
         )
         for page in r["results"]:
             t = page["properties"].get("Título", {})
             if t.get("title") and t["title"]:
-                programados.append(t["title"][0]["plain_text"])
+                titulo = t["title"][0]["plain_text"]
+                programados_lista.append(titulo)
+                programados_set.add(titulo.lower().strip())
+
             tema = page["properties"].get("Tema", {})
             if tema.get("rich_text") and tema["rich_text"]:
-                programados.append(tema["rich_text"][0]["plain_text"])
-        print(f"  📅 {len(programados)} conteúdo(s) programados no calendário Instagram")
+                tema_txt = tema["rich_text"][0]["plain_text"]
+                programados_lista.append(tema_txt)
+                programados_set.add(tema_txt.lower().strip())
+
+        print(f"  📅 {len(r['results'])} post(s) com data no calendário Instagram "
+              f"→ bloqueados para nova busca")
     except Exception as e:
         print(f"  ⚠ Erro ao carregar calendário programado: {e}")
-    return programados
+
+    return programados_lista, programados_set
 
 
 def montar_contexto_editorial(
     estrategia_instagram: str,
-    programados_calendario: list[str],
+    programados_calendario: list[str],  # apenas lista de títulos para texto
 ) -> str:
     partes = []
 
@@ -760,11 +779,15 @@ def processar_fonte(
     urls_sessao: set,
     titulos_existentes: set,
     urls_preexistentes: set,
+    titulos_programados: set,
     contexto_editorial: str,
 ) -> tuple[int, list[dict]]:
     """
     Retorna (quantidade_criada, lista_de_artigos_encontrados).
     A lista completa (incluindo os não criados por duplicata) alimenta o bilan.
+
+    titulos_programados: set de títulos já agendados no calendário Instagram
+    (com Data Publicação preenchida) — bloqueio hard, igual a titulos_existentes.
     """
     print(f"\n🔍 {fonte['nome']}")
     criados  = 0
@@ -800,8 +823,13 @@ def processar_fonte(
         if not contem_nicho_migratorio(titulo, resumo):
             print(f"  ↩ Fora do nicho: {titulo[:60]}")
             continue
+        # Verifica duplicata contra rascunhos existentes
         if topico_ja_coberto(titulo, titulos_existentes):
-            print(f"  ↩ Tema já coberto: {titulo[:60]}")
+            print(f"  ↩ Tema já coberto (rascunho existente): {titulo[:60]}")
+            continue
+        # Verifica duplicata contra posts JÁ AGENDADOS no Instagram
+        if topico_ja_coberto(titulo, titulos_programados):
+            print(f"  ↩ Tema já agendado no Instagram: {titulo[:60]}")
             continue
         if url_ja_existe_no_notion(url):
             print(f"  ↩ Duplicado (Notion check): {titulo[:60]}")
@@ -825,10 +853,18 @@ def processar_fonte(
 # BILAN EDITORIAL SEMANAL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def gerar_bilan_gemini(todos_artigos: list[dict], criados_por_categoria: dict, data_hoje: str) -> str:
+def gerar_bilan_gemini(
+    todos_artigos: list[dict],
+    criados_por_categoria: dict,
+    data_hoje: str,
+    titulos_programados: set,
+) -> str:
     """
     Envia ao Gemini o resumo de tudo que foi encontrado nesta rodada e pede
     um bilan editorial: o que estava em alta, pontos altos e baixos.
+
+    titulos_programados: injetado no prompt para que a recomendação final
+    nunca sugira algo já agendado no calendário Instagram.
     """
     if not todos_artigos:
         return "Nenhum artigo encontrado nesta rodada — bilan indisponível."
@@ -841,6 +877,16 @@ def gerar_bilan_gemini(todos_artigos: list[dict], criados_por_categoria: dict, d
 
     totais_str = " | ".join(f"{cat}: {n}" for cat, n in criados_por_categoria.items())
 
+    # Bloco de conteúdos já agendados (para blindar a recomendação)
+    if titulos_programados:
+        agenda_str = "\n".join(f"  - {t}" for t in sorted(titulos_programados)[:20])
+        agenda_bloco = (
+            f"\nCONTEÚDOS JÁ AGENDADOS NO INSTAGRAM (NÃO RECOMENDAR ESSES TEMAS):\n"
+            f"{agenda_str}\n"
+        )
+    else:
+        agenda_bloco = ""
+
     prompt = f"""Você é uma analista editorial especializada em imigração brasileira na França.
 
 Abaixo está o resultado da busca semanal de notícias para o canal Por Dentro (@ingrydinparis),
@@ -850,7 +896,7 @@ ARTIGOS ENCONTRADOS ESTA SEMANA:
 {artigos_str}
 
 TOTAIS POR CATEGORIA: {totais_str}
-
+{agenda_bloco}
 Com base nesses artigos, escreva um BILAN EDITORIAL SEMANAL em português com:
 
 1. **O QUE ESTAVA EM ALTA** — 3 tendências ou temas que apareceram com mais força na internet esta semana, com contexto de por que importam para a audiência do canal.
@@ -859,7 +905,7 @@ Com base nesses artigos, escreva um BILAN EDITORIAL SEMANAL em português com:
 
 3. **PONTOS BAIXOS** — 1 ou 2 alertas: temas saturados, notícias sem relevância prática para a audiência ou assuntos que devem ser evitados esta semana.
 
-4. **RECOMENDAÇÃO DA SEMANA** — Uma única frase com a aposta editorial mais estratégica para publicar nos próximos 7 dias.
+4. **RECOMENDAÇÃO DA SEMANA** — Uma única frase com a aposta editorial mais estratégica para publicar nos próximos 7 dias. OBRIGATÓRIO: não recomendar nenhum tema que já conste na lista de conteúdos agendados acima.
 
 Tom: analítico, direto, sem jargão. Máximo 400 palavras."""
 
@@ -1102,11 +1148,11 @@ def main():
     print("📋 PRÉ-ANÁLISE EDITORIAL — carregando contexto do Notion...\n")
 
     titulos_existentes, urls_preexistentes = carregar_pautas_existentes()
-    estrategia_instagram   = carregar_estrategia_instagram()
-    programados_calendario = carregar_calendario_programado()
-    contexto_editorial     = montar_contexto_editorial(
+    estrategia_instagram                   = carregar_estrategia_instagram()
+    programados_lista, titulos_programados = carregar_calendario_programado()
+    contexto_editorial                     = montar_contexto_editorial(
         estrategia_instagram,
-        programados_calendario,
+        programados_lista,
     )
 
     if contexto_editorial:
@@ -1114,6 +1160,9 @@ def main():
               f"— Gemini buscará apenas temas novos e complementares")
     else:
         print("\n  ℹ  Sem contexto editorial carregado — buscando com critérios padrão")
+
+    if titulos_programados:
+        print(f"  🔒 {len(titulos_programados)} tema(s) agendado(s) bloqueados para dedup hard")
 
     print(f"\n{'─' * 62}")
     print("🚀 Iniciando buscas...\n")
@@ -1134,6 +1183,7 @@ def main():
             urls_sessao,
             titulos_existentes,
             urls_preexistentes,
+            titulos_programados,
             contexto_editorial,
         )
         total_criados        += qtd
@@ -1160,7 +1210,12 @@ def main():
     print(f"   {len(todos_artigos_sessao)} artigos analisados pelo Gemini nesta rodada")
     print(f"{'─' * 62}")
 
-    bilan = gerar_bilan_gemini(todos_artigos_sessao, criados_por_categoria, data_hoje)
+    bilan = gerar_bilan_gemini(
+        todos_artigos_sessao,
+        criados_por_categoria,
+        data_hoje,
+        titulos_programados,
+    )
 
     print("\n" + bilan)
     print(f"\n{'─' * 62}")
