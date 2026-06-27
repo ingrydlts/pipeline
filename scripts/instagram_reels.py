@@ -30,14 +30,14 @@ AUDIENCIA_CONTEXT = open(os.path.join(_script_dir, "audiencia_context.txt"), enc
 # ─── FUNÇÃO 1: Garantir campos na base Instagram ─────────────────────────────
 def garantir_campos_instagram():
     """
-    Cria Roteiro Reel e Status Aprovação se ainda não existirem.
+    Cria Status Aprovação se ainda não existir.
+    O roteiro vai no corpo da página (blocks), não em propriedade.
     Idempotente.
     """
     try:
         notion.databases.update(
             database_id=DATABASE_INSTAGRAM,
             properties={
-                "Roteiro Reel":     {"rich_text": {}},
                 "Status Aprovação": {"select": {}},
             }
         )
@@ -287,7 +287,42 @@ Retorne APENAS JSON válido (sem markdown, sem texto extra):
         linhas.append("---")
         linhas.append("")
 
-    return {"roteiro": "\n".join(linhas)}
+    return {"roteiro": linhas}  # lista de linhas → vira blocks no corpo da página
+
+
+# ─── FUNÇÃO HELPER: Converter linhas em blocks do Notion ─────────────────────
+def _roteiro_para_blocks(linhas: list[str]) -> list[dict]:
+    """
+    Converte lista de linhas do roteiro em blocos paragraph do Notion.
+    Cada linha vira um parágrafo. Linhas com '===' viram heading_2.
+    Limite de 100 children por chamada API — pagina automaticamente se necessário.
+    """
+    blocks = []
+    for linha in linhas:
+        texto = linha[:2000]  # limite por bloco
+        if linha.startswith("=== "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {
+                    "rich_text": [{"type": "text", "text": {"content": texto.strip("= ").strip()}}]
+                }
+            })
+        elif linha.startswith("---"):
+            blocks.append({
+                "object": "block",
+                "type": "divider",
+                "divider": {}
+            })
+        else:
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": texto}}] if texto else []
+                }
+            })
+    return blocks
 
 
 # ─── FUNÇÃO 4: Verificar duplicatas ──────────────────────────────────────────
@@ -341,9 +376,6 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
         },
         **({"Pilars": {"multi_select": [{"name": pilar_instagram}]}} if pilar_instagram else {}),
         **({"META":   {"multi_select": [{"name": meta_val}]}}        if meta_val else {}),
-        "Roteiro Reel": {
-            "rich_text": [{"text": {"content": conteudo["roteiro"][:2000]}}]
-        },
         "Status Aprovação": {
             "select": {"name": "Aguardando"}
         },
@@ -354,11 +386,27 @@ def criar_pagina_instagram(pauta: dict, conteudo: dict) -> str:
             "date": {"start": pauta["data_publicacao"]}
         }
 
+    # Converter roteiro em blocks para o corpo da página
+    blocks = _roteiro_para_blocks(conteudo["roteiro"])
+
+    # Notion limita a 100 children por chamada — envia em lotes
     page = notion.pages.create(
         parent={"database_id": DATABASE_INSTAGRAM},
         properties=properties,
+        children=blocks[:100],
     )
-    return page["id"]
+    page_id = page["id"]
+
+    # Se houver mais de 100 blocos, adiciona o restante em seguida
+    remaining = blocks[100:]
+    if remaining:
+        for i in range(0, len(remaining), 100):
+            notion.blocks.children.append(
+                block_id=page_id,
+                children=remaining[i:i+100],
+            )
+
+    return page_id
 
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
