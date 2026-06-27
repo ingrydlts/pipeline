@@ -30,6 +30,10 @@ DATABASE_ENTRADA     = os.environ["NOTION_DATABASE_ID"].strip()
 DATABASE_SAIDA       = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"].strip()
 PAGINAS_ONLINE_DB_ID = "f16d6022-54ce-8325-a778-87c5e078b5b5"   # Páginas Online (landing pages)
 
+# ── Opcionais — ativam contexto estratégico ───────────────────────────────────
+NOTION_STRATEGY_PAGE_ID = os.environ.get("NOTION_STRATEGY_PAGE_ID", "").strip()
+NOTION_CALENDAR_DB_ID   = os.environ.get("NOTION_CALENDAR_DB_ID",   "").strip()
+
 # ─── Contextos editoriais (carregados de arquivo — não negociável para qualidade autônoma) ──
 _script_dir       = os.path.dirname(os.path.abspath(__file__))
 BRAND_CONTEXT     = open(os.path.join(_script_dir, "brand_context.txt"),    encoding="utf-8").read()
@@ -94,9 +98,12 @@ def _dia_ideal(formato: str, categoria: str, urgencia: str,
     if _antecipacao or (urg == "alta" and cat in ("juridica",)):
         return 3  # quinta
 
-    # Segunda: Reels sério informativo (burocrática/jurídica, urgente)
+    # Segunda ou Quarta: Reels informativo (burocrática/jurídica)
+    # Segunda = urgente/sério; Quarta = positivo/concreto/fácil
     if formato == "Reels" and cat in ("juridica", "burocratica"):
-        return 0  # segunda
+        return 0  # segunda — tom sério
+    if formato == "Reels" and cat == "civica":
+        return 2  # quarta — tom positivo/leve
 
     # Terça: Carrossel complementar/aprofundamento
     if formato == "Carrossel" and cat in ("academica", "financas"):
@@ -180,6 +187,70 @@ def calcular_data_publicacao(
     # Fallback: aceita empilhamento se nenhum slot livre em 4 semanas
     datas_usadas[data_iso] = datas_usadas.get(data_iso, 0) + 1
     return data_iso
+
+
+# ─── CONTEXTO ESTRATÉGICO ────────────────────────────────────────────────────
+def carregar_estrategia() -> str:
+    """
+    Lê a página de Planejamento Estratégico no Notion e extrai o texto relevante.
+    Retorna string vazia se NOTION_STRATEGY_PAGE_ID não estiver configurado.
+    O conteúdo é injetado no prompt do Claude para sugestões alinhadas ao plano Q3/Q4.
+    """
+    if not NOTION_STRATEGY_PAGE_ID:
+        print("  ℹ NOTION_STRATEGY_PAGE_ID não configurado — estratégia não carregada.")
+        return ""
+    try:
+        blocks = notion.blocks.children.list(block_id=NOTION_STRATEGY_PAGE_ID, page_size=50)
+        linhas = []
+        for b in blocks.get("results", []):
+            bt = b.get("type", "")
+            rich = b.get(bt, {}).get("rich_text", [])
+            texto = "".join(r.get("plain_text", "") for r in rich).strip()
+            if texto:
+                linhas.append(texto)
+        conteudo = "\n".join(linhas)[:3000]   # cap para não explodir o prompt
+        print(f"  ✓ Estratégia carregada: {len(linhas)} blocos, {len(conteudo)} chars.")
+        return conteudo
+    except Exception as e:
+        print(f"  ⚠ Não foi possível carregar estratégia: {e}")
+        return ""
+
+
+def carregar_calendario_instagram() -> dict:
+    """
+    Lê o calendário editorial do Instagram e retorna {date_iso: count}
+    com as datas que já têm post programado (Data Publicação preenchida).
+
+    Esse dict é usado para pré-popular datas_usadas em main(), garantindo
+    que as novas pautas não sejam sugeridas para dias já ocupados.
+    """
+    datas: dict = {}
+    if not NOTION_CALENDAR_DB_ID:
+        print("  ℹ NOTION_CALENDAR_DB_ID não configurado — calendário não carregado.")
+        return datas
+    try:
+        resp = notion.databases.query(
+            database_id=NOTION_CALENDAR_DB_ID,
+            filter={
+                "and": [
+                    {"property": "Status",           "status": {"does_not_equal": "Publicado"}},
+                    {"property": "Plataforma",        "multi_select": {"contains": "Instagram"}},
+                    {"property": "Data Publicação",   "date": {"is_not_empty": True}},
+                ]
+            },
+            page_size=100,
+        )
+        for page in resp.get("results", []):
+            dp = page["properties"].get("Data Publicação", {}).get("date")
+            if dp and dp.get("start"):
+                data_iso = dp["start"][:10]
+                datas[data_iso] = datas.get(data_iso, 0) + 1
+
+        print(f"  ✓ Calendário Instagram: {len(datas)} data(s) já ocupada(s).")
+        return datas
+    except Exception as e:
+        print(f"  ⚠ Não foi possível carregar calendário Instagram: {e}")
+        return {}
 
 
 # ─── CATÁLOGO DE PRODUTOS ─────────────────────────────────────────────────────
@@ -374,7 +445,8 @@ def buscar_para_processar() -> list[dict]:
 
 
 # ─── FUNÇÃO 2: Estruturar com Claude ─────────────────────────────────────────
-def estruturar_com_claude(pauta: dict, catalogo: list[dict]) -> dict:
+def estruturar_com_claude(pauta: dict, catalogo: list[dict],
+                          estrategia: str = "") -> dict:
     personas_str     = " e ".join(pauta["personas"]) if pauta["personas"] else "P02"
     formato_sugerido = pauta["formato_sugerido"] or "Carrossel"
     score            = pauta["score_conversao"]
@@ -388,10 +460,16 @@ def estruturar_com_claude(pauta: dict, catalogo: list[dict]) -> dict:
     else:
         catalogo_str = "PÁGINAS ATIVAS: nenhuma. Use CTA genérico."
 
+    estrategia_bloco = (
+        f"\nPLANEJAMENTO ESTRATÉGICO DO CANAL (Q3/Q4 — use para alinhar ângulo, pilar e CTA):\n{estrategia}\n"
+        if estrategia else ""
+    )
+
     prompt = f"""{BRAND_CONTEXT}
 
 {AUDIENCIA_CONTEXT}
 
+{estrategia_bloco}
 ---
 PAUTA PARA ESTRUTURAR:
 título: {pauta['titulo_bruto']}
@@ -409,9 +487,9 @@ REGRAS CTA:
 • Orgânico → cívico, score≤2. Copy: "Você já passou por isso? Conta nos comentários 👇"
 
 LÓGICA DE FORMATO POR DIA DE PUBLICAÇÃO (use para escolher format e voice_tone):
-• Segunda: Reels informativo sério — pessoas engajadas para aprender. Formato: Reels. Tom: Explicativo.
+• Segunda: Reels informativo sério (jurídico, burocrático, urgente) — pessoas engajadas para aprender. Formato: Reels. Tom: Explicativo.
 • Terça: Carrossel com informação adicional ou o que não coube no Reels. Formato: Carrossel. Tom: Explicativo.
-• Quarta: Informação positiva, fácil ou de valor concreto (endereços, dicas, cases de sucesso). Formato: Carrossel ou Stories. Tom: Observador ou Sentimental.
+• Quarta: Informação positiva, fácil ou de valor concreto (endereços, dicas, cases, cívico). Pode ser Reels curto e leve OU Carrossel. Tom: Observador ou Sentimental.
 • Quinta: Antecipação — abertura de vagas, mudança de regras, alertas. Formato: Carrossel ou Reels. Tom: Observador.
 • Sexta: Boa notícia. Formato: Reels ou Stories. Tom: Sentimental.
 • Domingo: Inspiração, reflexão, começo de organização. Formato: Carrossel ou Reels. Tom: Sentimental.
@@ -577,6 +655,10 @@ def main():
     print("\n📦 Carregando catálogo de produtos e landing pages...")
     catalogo = carregar_catalogo_produtos()
 
+    print("\n📅 Carregando calendário Instagram e planejamento estratégico...")
+    datas_usadas = carregar_calendario_instagram()   # pré-popula datas já ocupadas
+    estrategia   = carregar_estrategia()
+
     print("\n🔍 Buscando rascunhos marcados com 'Enviar para Claude'...")
     rascunhos = buscar_para_processar()
 
@@ -586,15 +668,15 @@ def main():
 
     print(f"   → {len(rascunhos)} pauta(s) para processar\n")
 
-    processados  = 0
-    erros        = 0
-    datas_usadas = {}   # {date_iso: count} — controla empilhamento por dia
+    processados = 0
+    erros       = 0
+    # datas_usadas já inicializado com calendário Instagram acima
 
     for pauta in rascunhos:
         print(f"🤖 [{pauta['categoria']} | score {pauta['score_conversao']}] "
               f"{pauta['titulo_bruto'][:70]}")
         try:
-            estruturada = estruturar_com_claude(pauta, catalogo)
+            estruturada = estruturar_com_claude(pauta, catalogo, estrategia)
 
             # Calcular data DEPOIS de Claude, com controle de slots entre pautas
             estruturada["data_publicacao"] = calcular_data_publicacao(
