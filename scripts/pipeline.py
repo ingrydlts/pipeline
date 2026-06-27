@@ -28,7 +28,7 @@ claude  = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 DATABASE_ENTRADA     = os.environ["NOTION_DATABASE_ID"].strip()
 DATABASE_SAIDA       = os.environ["NOTION_DATABASE_PAUTASPRONTAS_ID"].strip()
-PAGINAS_ONLINE_DB_ID = "f16d6022-54ce-8325-a778-87c5e078b5b5"   # Páginas Online (landing pages)
+PAGINAS_ONLINE_DB_ID = "37bd602254ce8030a009d1749419f878"   # Páginas Online (landing pages)
 
 # ── Opcionais — ativam contexto estratégico ───────────────────────────────────
 NOTION_STRATEGY_PAGE_ID = os.environ.get("NOTION_STRATEGY_PAGE_ID", "").strip()
