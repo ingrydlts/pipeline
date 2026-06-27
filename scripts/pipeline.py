@@ -382,6 +382,8 @@ def garantir_propriedades_saida():
                 # ── Campos de navegação rápida ────────────────────────────────
                 "Vira Newsletter?": {"select": {}},
                 "Dia Sugerido":     {"rich_text": {}},
+                # ── Jornada do usuário ────────────────────────────────────────
+                "Página Sugerida":  {"rich_text": {}},
             }
         )
         print("  ✓ Banco de saída: propriedades verificadas.")
@@ -494,6 +496,12 @@ LÓGICA DE FORMATO POR DIA DE PUBLICAÇÃO (use para escolher format e voice_ton
 • Sexta: Boa notícia. Formato: Reels ou Stories. Tom: Sentimental.
 • Domingo: Inspiração, reflexão, começo de organização. Formato: Carrossel ou Reels. Tom: Sentimental.
 
+ANÁLISE DE PÁGINA/JORNADA (campo "pagina_sugerida"):
+Avalie se existe uma lacuna na jornada do usuário após consumir este conteúdo.
+• Se já existe uma página ativa no catálogo que captura bem esse lead → escreva "" (vazio).
+• Se o tema tem score ≥ 3 E não há página ativa que cubra essa necessidade → descreva em 1-2 frases a página que DEVERIA existir: qual seria o título, a oferta/isca e o objetivo de negócio (captura de lead, venda, lista). Seja específico: não "uma página sobre imigração" mas "página de captura com guia PDF '5 documentos para o visto de estudante' — objetivo: lista de leads para produto de preparação de visto".
+• Se score ≤ 2 ou tema é muito pontual/noticioso → escreva "" (vazio).
+
 ANÁLISE NEWSLETTER (campo "angulo_newsletter"):
 • Se cta_tipo for "Newsletter" ou "Ambos": escreva UM parágrafo específico explicando QUAL ÂNGULO aprofundado este tema teria na newsletter — o que a newsletter entregaria além do post (dados adicionais, contexto histórico, casos práticos, etc).
 • Se cta_tipo for "Orgânico" ou "Comentário+Automação": escreva "N/A — conteúdo não indicado para newsletter neste momento." Explique em 1 frase por quê (ex: tema muito operacional, sem profundidade analítica suficiente).
@@ -502,7 +510,7 @@ PILAR: Sistema(burocracia/dinheiro/processos) | Trajetória(carreira/estudos/vid
 VOICE TONE: Observador(jornalístico, neutro) | Explicativo(professor, passo-a-passo) | Sentimental(emocional, pessoal) | Humor(leve, irônico)
 
 Retorne APENAS JSON válido:
-{{"title":"","hook":"","desc":"","kpi":"Salvamento alto|Compartilhamento alto|Comentário alto|Alcance","format":"Carrossel|Reels|Stories","formatDetail":"","fonte":"","urgency":"Alta|media|Baixa","cta_tipo":"Comentário+Automação|Newsletter|Ambos|Orgânico","cta_copy":"","angulo_newsletter":"","pilar":"","voice_tone":"","produto_sugerido":"","pagina_url_relevante":""}}"""
+{{"title":"","hook":"","desc":"","kpi":"Salvamento alto|Compartilhamento alto|Comentário alto|Alcance","format":"Carrossel|Reels|Stories","formatDetail":"","fonte":"","urgency":"Alta|media|Baixa","cta_tipo":"Comentário+Automação|Newsletter|Ambos|Orgânico","cta_copy":"","angulo_newsletter":"","pilar":"","voice_tone":"","produto_sugerido":"","pagina_url_relevante":"","pagina_sugerida":""}}"""
 
     msg = claude.messages.create(
         model="claude-haiku-4-5-20251001",
@@ -574,6 +582,7 @@ def escrever_no_notion(p: dict):
         "Ângulo Newsletter": {"rich_text": [{"text": {"content": p.get("angulo_newsletter") or ""}}]},
         "Produto Sugerido":  {"rich_text": [{"text": {"content": p.get("produto_sugerido") or ""}}]},
         "Landing Page URL":  {"url": p.get("pagina_url_relevante") or None},
+        "Página Sugerida":   {"rich_text": [{"text": {"content": p.get("pagina_sugerida") or ""}}]},
         "Pilar":      {"select": {"name": p["pilar"]}},
         "Voice Tone": {"select": {"name": p["voice_tone"]}},
         "Status":     {"select": {"name": "Pronta"}},
@@ -699,9 +708,10 @@ def main():
                     pass
             produto_log = f" → {estruturada['produto_sugerido']}" if estruturada.get("produto_sugerido") else ""
             nl_log      = " 📩 NL" if estruturada.get("cta_tipo") in ("Newsletter", "Ambos") else ""
+            pag_log     = f"\n     🔧 PÁGINA SUGERIDA: {estruturada['pagina_sugerida']}" if estruturada.get("pagina_sugerida") else ""
             print(f"  ✓ [{estruturada['cta_tipo']}] [{estruturada['pilar']}] [{estruturada['format']}] "
                   f"{estruturada['title'][:50]}{produto_log}{nl_log}"
-                  f"\n     📅 {dp}{dia}")
+                  f"\n     📅 {dp}{dia}{pag_log}")
             processados += 1
         except Exception as e:
             print(f"  ✗ Erro: {e}")
