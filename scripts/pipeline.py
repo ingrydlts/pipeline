@@ -62,48 +62,124 @@ _SAZONALIDADE = {
 
 
 # ─── DATA DE PUBLICAÇÃO SUGERIDA ─────────────────────────────────────────────
-def calcular_data_publicacao(urgencia: str, palavras_chave: str = "") -> str:
+#
+# Lógica de dia da semana por tipo de conteúdo:
+#   Segunda  (0): Reels informativo sério — pessoas engajadas para aprender
+#   Terça    (1): Carrossel complementar — aprofunda o que não coube no Reels
+#   Quarta   (2): Info positiva/fácil/de valor concreto — endereços, dicas, cases
+#   Quinta   (3): Antecipação — abertura de vagas, mudança de regras, alerta
+#   Sexta    (4): Boa notícia
+#   Sábado   (5): PAUSA — não publicar
+#   Domingo  (6): Inspiração, reflexão, se organizar pro futuro
+#
+_NOMES_DIA = {0: "segunda", 1: "terça", 2: "quarta",
+              3: "quinta",  4: "sexta", 5: "sábado", 6: "domingo"}
+
+
+def _dia_ideal(formato: str, categoria: str, urgencia: str,
+               pilar: str, kpi: str, palavras_chave: str) -> int:
     """
-    Sugere data de publicação (quinta-feira) com base em urgência e sazonalidade.
-
-    Lógica:
-      • Alta   → próxima quinta-feira (mín. 2 dias de distância)
-      • Média  → quinta-feira da semana seguinte
-      • Baixa  → quinta-feira em 2 semanas
-
-    Quinta-feira é o dia-âncora do canal (YouTube publica quinta;
-    Instagram deriva na sexta ou nos dias seguintes).
-
-    Se o tema contiver palavras-chave sazonais do mês atual,
-    urgência "baixa" é promovida para "media" automaticamente.
+    Retorna o dia da semana ideal (0=seg … 6=dom) para este conteúdo.
+    Sábado (5) é sempre excluído — dia de pausa no canal.
     """
-    hoje = date.today()
+    cat  = categoria.lower()
+    kwds = palavras_chave.lower()
+    urg  = urgencia.lower().strip()
 
-    # Dias até a próxima quinta (weekday=3)
-    dias_ate_quinta = (3 - hoje.weekday()) % 7
-    if dias_ate_quinta < 2:          # muito próximo — evita prazo inviável de produção
-        dias_ate_quinta += 7
-    proxima_quinta = hoje + timedelta(days=dias_ate_quinta)
+    # Quinta: conteúdo de antecipação — alerta, mudança de regra, abertura
+    _antecipacao = any(w in kwds for w in [
+        "mudança", "nova lei", "alteração", "abertura", "vagas", "prazo",
+        "alerta", "atenção", "novo decreto", "portaria", "circular",
+    ])
+    if _antecipacao or (urg == "alta" and cat in ("juridica",)):
+        return 3  # quinta
 
-    # Verificar sazonalidade do mês atual
-    palavras_sazonais = _SAZONALIDADE.get(hoje.month, "").split(", ")
-    palavras_lower    = palavras_chave.lower()
+    # Segunda: Reels sério informativo (burocrática/jurídica, urgente)
+    if formato == "Reels" and cat in ("juridica", "burocratica"):
+        return 0  # segunda
+
+    # Terça: Carrossel complementar/aprofundamento
+    if formato == "Carrossel" and cat in ("academica", "financas"):
+        return 1  # terça
+
+    # Quarta: positivo, concreto, fácil de consumir
+    if cat == "civica" or pilar == "Identidade" or kpi == "Compartilhamento alto":
+        return 2  # quarta
+
+    # Domingo: inspiração / trajetória / reflexão
+    if pilar == "Trajetória":
+        return 6  # domingo
+
+    # Sexta: boa notícia (fallback positivo)
+    if kpi in ("Compartilhamento alto", "Alcance"):
+        return 4  # sexta
+
+    # Fallback por urgência → distribui pela semana
+    if urg == "alta":
+        return 0   # segunda
+    elif urg in ("media", "média"):
+        return 2   # quarta
+    else:
+        return 6   # domingo
+
+
+def calcular_data_publicacao(
+    resultado_claude: dict,
+    palavras_chave: str,
+    datas_usadas: dict,   # {date_iso: count} — modificado in-place para evitar empilhamento
+) -> str:
+    """
+    Retorna a data ISO do próximo slot disponível para este conteúdo,
+    respeitando o dia ideal da semana e evitando empilhar múltiplos
+    posts no mesmo dia.
+
+    Sábado é sempre pulado. Se o dia ideal já tiver 1 post nesta rodada,
+    tenta o mesmo dia na semana seguinte (max 4 semanas de antecedência).
+    Sazonalidade ainda promove urgência "baixa" → "media".
+    """
+    hoje         = date.today()
+    urgencia     = resultado_claude.get("urgency", "baixa")
+    categoria    = resultado_claude.get("categoria", "")
+    formato      = resultado_claude.get("format", "Carrossel")
+    pilar        = resultado_claude.get("pilar", "Sistema")
+    kpi          = resultado_claude.get("kpi", "Salvamento alto")
+
+    # Verificar sazonalidade — promove urgência se tema bate com mês atual
+    palavras_sazonais  = _SAZONALIDADE.get(hoje.month, "").split(", ")
     tema_sazonal_ativo = any(
-        palavra in palavras_lower
-        for palavra in palavras_sazonais
-        if len(palavra) > 3
+        p in palavras_chave.lower()
+        for p in palavras_sazonais if len(p) > 3
     )
-
     urgencia_norm = urgencia.lower().strip()
     if tema_sazonal_ativo and urgencia_norm == "baixa":
-        urgencia_norm = "media"   # promove urgência se tema é sazonal no mês
+        urgencia_norm = "media"
 
+    # Offset de semana por urgência
     if urgencia_norm == "alta":
-        return proxima_quinta.isoformat()
+        semana_offset = 0
     elif urgencia_norm in ("media", "média"):
-        return (proxima_quinta + timedelta(weeks=1)).isoformat()
-    else:                            # baixa
-        return (proxima_quinta + timedelta(weeks=2)).isoformat()
+        semana_offset = 1
+    else:
+        semana_offset = 2
+
+    # Dia ideal para este tipo de conteúdo
+    dia_alvo = _dia_ideal(formato, categoria, urgencia_norm, pilar, kpi, palavras_chave)
+
+    # Encontra próxima ocorrência do dia alvo com slot disponível
+    for extra_semanas in range(semana_offset, semana_offset + 4):
+        dias_ate_alvo = (dia_alvo - hoje.weekday()) % 7
+        if dias_ate_alvo < 2:      # prazo mínimo de produção = 2 dias
+            dias_ate_alvo += 7
+        candidata = hoje + timedelta(days=dias_ate_alvo) + timedelta(weeks=extra_semanas)
+        data_iso  = candidata.isoformat()
+
+        if datas_usadas.get(data_iso, 0) < 1:   # slot livre
+            datas_usadas[data_iso] = datas_usadas.get(data_iso, 0) + 1
+            return data_iso
+
+    # Fallback: aceita empilhamento se nenhum slot livre em 4 semanas
+    datas_usadas[data_iso] = datas_usadas.get(data_iso, 0) + 1
+    return data_iso
 
 
 # ─── CATÁLOGO DE PRODUTOS ─────────────────────────────────────────────────────
@@ -231,8 +307,10 @@ def garantir_propriedades_saida():
                 "Landing Page URL":  {"url": {}},
                 "Pilar":      {"select": {}},
                 "Voice Tone": {"select": {}},
-                # ── NOVO: data sugerida de publicação ────────────────────────
                 "Data Publicação": {"date": {}},
+                # ── Campos de navegação rápida ────────────────────────────────
+                "Vira Newsletter?": {"select": {}},
+                "Dia Sugerido":     {"rich_text": {}},
             }
         )
         print("  ✓ Banco de saída: propriedades verificadas.")
@@ -318,7 +396,7 @@ def estruturar_com_claude(pauta: dict, catalogo: list[dict]) -> dict:
 PAUTA PARA ESTRUTURAR:
 título: {pauta['titulo_bruto']}
 categoria: {pauta['categoria']} | personas: {personas_str} | urgência: {pauta['urgencia']} | score: {score}
-formato: {formato_sugerido} | publisher: {pauta['publisher']}
+formato sugerido: {formato_sugerido} | publisher: {pauta['publisher']}
 keywords: {pauta['palavras_chave']}
 resumo: {pauta['notas'][:300]}
 
@@ -330,15 +408,27 @@ REGRAS CTA:
 • Ambos → tem as duas camadas. Dois CTAs separados por \\n\\n.
 • Orgânico → cívico, score≤2. Copy: "Você já passou por isso? Conta nos comentários 👇"
 
-PILAR: Sistema(burocracia/dinheiro) | Trajetória(carreira/estudos) | Identidade(pertencimento/cultura) | Sociedade(política/direitos)
-VOICE TONE: Observador | Explicativo | Sentimental | Humor
+LÓGICA DE FORMATO POR DIA DE PUBLICAÇÃO (use para escolher format e voice_tone):
+• Segunda: Reels informativo sério — pessoas engajadas para aprender. Formato: Reels. Tom: Explicativo.
+• Terça: Carrossel com informação adicional ou o que não coube no Reels. Formato: Carrossel. Tom: Explicativo.
+• Quarta: Informação positiva, fácil ou de valor concreto (endereços, dicas, cases de sucesso). Formato: Carrossel ou Stories. Tom: Observador ou Sentimental.
+• Quinta: Antecipação — abertura de vagas, mudança de regras, alertas. Formato: Carrossel ou Reels. Tom: Observador.
+• Sexta: Boa notícia. Formato: Reels ou Stories. Tom: Sentimental.
+• Domingo: Inspiração, reflexão, começo de organização. Formato: Carrossel ou Reels. Tom: Sentimental.
+
+ANÁLISE NEWSLETTER (campo "angulo_newsletter"):
+• Se cta_tipo for "Newsletter" ou "Ambos": escreva UM parágrafo específico explicando QUAL ÂNGULO aprofundado este tema teria na newsletter — o que a newsletter entregaria além do post (dados adicionais, contexto histórico, casos práticos, etc).
+• Se cta_tipo for "Orgânico" ou "Comentário+Automação": escreva "N/A — conteúdo não indicado para newsletter neste momento." Explique em 1 frase por quê (ex: tema muito operacional, sem profundidade analítica suficiente).
+
+PILAR: Sistema(burocracia/dinheiro/processos) | Trajetória(carreira/estudos/vida na França) | Identidade(pertencimento/cultura/emoção) | Sociedade(política/direitos/notícias)
+VOICE TONE: Observador(jornalístico, neutro) | Explicativo(professor, passo-a-passo) | Sentimental(emocional, pessoal) | Humor(leve, irônico)
 
 Retorne APENAS JSON válido:
-{{"title":"","hook":"","desc":"","kpi":"Salvamento alto|Compartilhamento alto|Comentário alto|Alcance","format":"{formato_sugerido}","formatDetail":"","fonte":"","urgency":"Alta|media|Baixa","cta_tipo":"Comentário+Automação|Newsletter|Ambos|Orgânico","cta_copy":"","angulo_newsletter":"","pilar":"","voice_tone":"","produto_sugerido":"","pagina_url_relevante":""}}"""
+{{"title":"","hook":"","desc":"","kpi":"Salvamento alto|Compartilhamento alto|Comentário alto|Alcance","format":"Carrossel|Reels|Stories","formatDetail":"","fonte":"","urgency":"Alta|media|Baixa","cta_tipo":"Comentário+Automação|Newsletter|Ambos|Orgânico","cta_copy":"","angulo_newsletter":"","pilar":"","voice_tone":"","produto_sugerido":"","pagina_url_relevante":""}}"""
 
     msg = claude.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=800,
+        max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -355,12 +445,7 @@ Retorne APENAS JSON válido:
     result["categoria"]      = pauta["categoria"]
     result["score"]          = score
     result["palavras_chave"] = pauta["palavras_chave"]
-
-    # ── NOVO: calcular data de publicação sugerida ────────────────────────────
-    result["data_publicacao"] = calcular_data_publicacao(
-        result.get("urgency", pauta.get("urgencia", "baixa")),
-        pauta.get("palavras_chave", ""),
-    )
+    # data_publicacao será calculada em main() com datas_usadas para evitar empilhamento
 
     pagina_url = result.get("pagina_url_relevante", "")
     pagina_id  = None
@@ -416,9 +501,24 @@ def escrever_no_notion(p: dict):
         "Status":     {"select": {"name": "Pronta"}},
     }
 
-    # ── NOVO: data sugerida de publicação ─────────────────────────────────────
     if p.get("data_publicacao"):
         properties["Data Publicação"] = {"date": {"start": p["data_publicacao"]}}
+
+    # "Vira Newsletter?" — derivado do cta_tipo para filtro rápido no Notion
+    cta = p.get("cta_tipo", "")
+    vira_nl = "Sim" if cta in ("Newsletter", "Ambos") else "Não"
+    properties["Vira Newsletter?"] = {"select": {"name": vira_nl}}
+
+    # "Dia Sugerido" — nome legível do dia da semana para kanban visual
+    if p.get("data_publicacao"):
+        try:
+            from datetime import date as _date
+            dia_num = _date.fromisoformat(p["data_publicacao"]).weekday()
+            properties["Dia Sugerido"] = {
+                "rich_text": [{"text": {"content": _NOMES_DIA.get(dia_num, "")}}]
+            }
+        except Exception:
+            pass
 
     if p.get("pagina_id_relevante"):
         properties["🌐 Páginas Online (1)"] = {
@@ -486,21 +586,40 @@ def main():
 
     print(f"   → {len(rascunhos)} pauta(s) para processar\n")
 
-    processados = 0
-    erros       = 0
+    processados  = 0
+    erros        = 0
+    datas_usadas = {}   # {date_iso: count} — controla empilhamento por dia
 
     for pauta in rascunhos:
         print(f"🤖 [{pauta['categoria']} | score {pauta['score_conversao']}] "
               f"{pauta['titulo_bruto'][:70]}")
         try:
             estruturada = estruturar_com_claude(pauta, catalogo)
+
+            # Calcular data DEPOIS de Claude, com controle de slots entre pautas
+            estruturada["data_publicacao"] = calcular_data_publicacao(
+                estruturada,
+                pauta.get("palavras_chave", ""),
+                datas_usadas,
+            )
+
             escrever_no_notion(estruturada)
             marcar_processado(pauta["notion_page_id"])
 
-            produto_log = f" → produto: {estruturada['produto_sugerido']}" if estruturada.get("produto_sugerido") else ""
-            data_log    = f" 📅 {estruturada['data_publicacao']}" if estruturada.get("data_publicacao") else ""
-            print(f"  ✓ [{estruturada['cta_tipo']}] [{estruturada['pilar']}] "
-                  f"{estruturada['title'][:55]}{produto_log}{data_log}")
+            # Log rico com dia da semana
+            dp   = estruturada.get("data_publicacao", "")
+            dia  = ""
+            if dp:
+                try:
+                    from datetime import date as _d
+                    dia = f" ({_NOMES_DIA[_d.fromisoformat(dp).weekday()]})"
+                except Exception:
+                    pass
+            produto_log = f" → {estruturada['produto_sugerido']}" if estruturada.get("produto_sugerido") else ""
+            nl_log      = " 📩 NL" if estruturada.get("cta_tipo") in ("Newsletter", "Ambos") else ""
+            print(f"  ✓ [{estruturada['cta_tipo']}] [{estruturada['pilar']}] [{estruturada['format']}] "
+                  f"{estruturada['title'][:50]}{produto_log}{nl_log}"
+                  f"\n     📅 {dp}{dia}")
             processados += 1
         except Exception as e:
             print(f"  ✗ Erro: {e}")
