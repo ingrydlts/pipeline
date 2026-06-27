@@ -1,4 +1,4 @@
-name: Por Dentro — Camada 3 (Instagram Carrossel)
+name: Por Dentro — Camada 3 (Instagram Carrossel + Reels)
 
 on:
   schedule:
@@ -30,3 +30,11 @@ jobs:
           NOTION_DATABASE_PAUTASPRONTAS_ID: ${{ secrets.NOTION_DATABASE_PAUTASPRONTAS_ID }}
           NOTION_DATABASE_INSTAGRAM_ID:     ${{ secrets.NOTION_DATABASE_INSTAGRAM_ID }}
         run: python scripts/instagram_carrossel.py
+
+      - name: Rodar Camada 3B — Instagram Reels
+        env:
+          NOTION_TOKEN:                     ${{ secrets.NOTION_TOKEN }}
+          ANTHROPIC_API_KEY:                ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_DATABASE_PAUTASPRONTAS_ID: ${{ secrets.NOTION_DATABASE_PAUTASPRONTAS_ID }}
+          NOTION_DATABASE_INSTAGRAM_ID:     ${{ secrets.NOTION_DATABASE_INSTAGRAM_ID }}
+        run: python scripts/instagram_reels.py
